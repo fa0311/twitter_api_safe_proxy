@@ -1,0 +1,35 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.3.8/schema.json",
+  "formatter": {
+    "lineWidth": 120
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true,
+      "style": {
+        "noNonNullAssertion": "off"
+      },
+      "suspicious": {
+        "noExplicitAny": "off"
+      },
+      "nursery": {
+        "noFloatingPromises": "error"
+      }
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["injects/**/*.js"],
+      "linter": {
+        "enabled": true,
+        "rules": {
+          "recommended": true,
+          "nursery": {
+            "noFloatingPromises": "off"
+          }
+        }
+      }
+    }
+  ]
+}
