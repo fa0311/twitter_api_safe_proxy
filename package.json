@@ -22,7 +22,7 @@
   "license": "ISC",
   "dependencies": {
     "@hono/zod-validator": "^0.7.5",
-    "hono": "^4.11.0",
+    "hono": "^4.11.7",
     "pino": "^10.1.0",
     "playwright": "^1.57.0",
     "zod": "^4.1.13"

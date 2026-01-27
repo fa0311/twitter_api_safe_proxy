@@ -10,10 +10,10 @@ importers:
     dependencies:
       '@hono/zod-validator':
         specifier: ^0.7.5
-        version: 0.7.5(hono@4.11.0)(zod@4.1.13)
+        version: 0.7.5(hono@4.11.7)(zod@4.1.13)
       hono:
-        specifier: ^4.11.0
-        version: 4.11.0
+        specifier: ^4.11.7
+        version: 4.11.7
       pino:
         specifier: ^10.1.0
         version: 10.1.0
@@ -303,8 +303,8 @@ packages:
   help-me@5.0.0:
     resolution: {integrity: sha512-7xgomUX6ADmcYzFik0HzAxh/73YlKR9bmFzf51CZwR+b6YtzU2m0u49hQCqV6SvlqIqsaxovfwdvbnsw3b/zpg==}
 
-  hono@4.11.0:
-    resolution: {integrity: sha512-Jg8uZzN2ul8/qlyid5FO8O624F3AK0wKtkgoeEON1qBum1rM1itYBxoMKu/1SPJC7F1+xlIZsJMmc4HHhJ1AWg==}
+  hono@4.11.7:
+    resolution: {integrity: sha512-l7qMiNee7t82bH3SeyUCt9UF15EVmaBvsppY2zQtrbIhl/yzBTny+YUxsVjSjQ6gaqaeVtZmGocom8TzBlA4Yw==}
     engines: {node: '>=16.9.0'}
 
   joycon@3.1.1:
@@ -519,9 +519,9 @@ snapshots:
   '@esbuild/win32-x64@0.27.1':
     optional: true
 
-  '@hono/zod-validator@0.7.5(hono@4.11.0)(zod@4.1.13)':
+  '@hono/zod-validator@0.7.5(hono@4.11.7)(zod@4.1.13)':
     dependencies:
-      hono: 4.11.0
+      hono: 4.11.7
       zod: 4.1.13
 
   '@pinojs/redact@0.4.0': {}
@@ -585,7 +585,7 @@ snapshots:
 
   help-me@5.0.0: {}
 
-  hono@4.11.0: {}
+  hono@4.11.7: {}
 
   joycon@3.1.1: {}
 
