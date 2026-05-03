@@ -1,12 +1,6 @@
 {
-  "[json]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
-  },
-  "[jsonc]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
-  },
-  "[typescript]": {
-    "editor.defaultFormatter": "biomejs.biome"
-  },
-  "npm.packageManager": "pnpm"
+	"[typescript][javascript][json][jsonc]": {
+		"editor.defaultFormatter": "biomejs.biome"
+	},
+	"npm.packageManager": "pnpm"
 }
