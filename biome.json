@@ -27,6 +27,9 @@
 					"recommended": true,
 					"nursery": {
 						"noFloatingPromises": "off"
+					},
+					"complexity": {
+						"noArguments": "off"
 					}
 				}
 			}

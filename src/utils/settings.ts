@@ -1,65 +1,46 @@
 import { z } from "zod";
 
-const ViewportSchema = z.object({
+const ViewportSchema = z.strictObject({
 	width: z.number().int().positive().default(1280),
 	height: z.number().int().positive().default(720),
 });
 
-const ProxySchema = z.object({
+const ProxySchema = z.strictObject({
 	server: z.string().min(1, "Proxy server is required"),
 	bypass: z.string().optional(),
 	username: z.string().optional(),
 	password: z.string().optional(),
 });
 
-const GraphQLSchema = z.object({
-	endpoint: z.url().default("https://x.com/i/api/graphql/"),
-});
-
-const HomeSchema = z.object({
+const HomeSchema = z.strictObject({
 	url: z.url().default("https://x.com/home"),
 });
 
-const BrowserSchema = z.object({
+const BrowserSchema = z.strictObject({
 	headless: z.boolean().default(false),
 	viewport: ViewportSchema.optional(),
 	proxy: ProxySchema.optional(),
-	args: z.array(z.string()).optional(),
+	args: z.array(z.string()).default([]),
 	executablePath: z.string().optional(),
 	env: z.record(z.string(), z.string()).optional(),
 	userDataDir: z.string(),
 });
 
-const ProfileSchema = z.object({
+const ProfileSchema = z.strictObject({
 	name: z.string().min(1, "Profile name is required"),
 	browserType: z.enum(["chromium", "firefox", "webkit"]).default("chromium"),
-	graphql: GraphQLSchema.default(GraphQLSchema.parse({})),
 	home: HomeSchema.default(HomeSchema.parse({})),
 	browser: BrowserSchema,
 });
 
-const FavoriteSchema = z.object({
-	strategy: z.enum(["like", "retweet", "reply"]).default("like"),
-	rateLimitPerHour: z.number().int().min(1).default(100),
-});
-
-const PoolSchema = z.object({
-	name: z.string().min(1, "Pool name is required"),
-	profiles: z.array(z.string()).min(1, "At least one profile is required"),
-	strategy: z.enum(["round-robin", "random"]).default("round-robin"),
-	failover: FavoriteSchema.optional(),
-});
-
-const SettingsSchema = z.object({
+const SettingsSchema = z.strictObject({
 	port: z.number().int().min(1).max(65535).default(3000),
 	logLevel: z.enum(["fatal", "error", "warn", "info", "debug", "trace"]).default("info"),
 	logPrettyPrint: z.boolean().default(true),
 	profiles: z.array(ProfileSchema).min(1, "At least one profile is required"),
-	pools: z.array(PoolSchema).min(1, "At least one pool is required"),
-	defaultPool: z.string().min(1).optional(),
 });
 
-export const loadSettings = async (data: unknown = undefined) => {
+export const loadSettings = async (data: unknown) => {
 	const settings = await SettingsSchema.safeParseAsync(data);
 	if (settings.success) {
 		return settings.data;

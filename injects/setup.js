@@ -1,4 +1,4 @@
-// https://github.com/tsukumijima/KonomiTV/blob/master/server/static/zendriver_setup.js
+// ref: https://github.com/tsukumijima/KonomiTV/blob/master/server/static/zendriver_setup.js
 (async () => {
 	const objectMocker = async (target, name) => {
 		let value = target[name];
@@ -29,7 +29,7 @@
 			if (modules && typeof modules === "object") {
 				for (const moduleId of Object.keys(modules)) {
 					const originalFactory = modules[moduleId];
-					modules[moduleId] = function (module, exports, require) {
+					modules[moduleId] = function (module, _exports, require) {
 						const originalDefineExports = require.d;
 						require.d = (exp, definition) => {
 							for (const key in definition) {
@@ -44,7 +44,7 @@
 						require.d = originalDefineExports;
 
 						const propertyDescriptors = Object.getOwnPropertyDescriptors(module.exports);
-						for (const [exportKey, descriptor] of Object.entries(propertyDescriptors)) {
+						for (const [exportKey, _descriptor] of Object.entries(propertyDescriptors)) {
 							const originalClass = module.exports[exportKey];
 							if (typeof originalClass !== "function") {
 								continue;
@@ -68,6 +68,12 @@
 							const constructionProxy = new Proxy(originalClass, {
 								construct(target, args, newTarget) {
 									const instance = Reflect.construct(target, args, newTarget);
+									if (Array.isArray(globalThis.elonmusk_114514_enable_debug)) {
+										instance.dispatch = (...args) => {
+											globalThis.elonmusk_114514_enable_debug.push(args);
+											return target.prototype.dispatch.apply(instance, args);
+										};
+									}
 									resolve(instance);
 									return instance;
 								},
@@ -91,7 +97,7 @@
 	console.log("Twitter API client found");
 
 	chunkArray.push = originalPush;
-	globalThis.elonmusk_114514_request = async (query) => {
-		return client[query[0]].apply(client, query.slice(1));
+	globalThis.elonmusk_114514_request = async ({ property, query }) => {
+		return client[property].apply(client, query);
 	};
 })();

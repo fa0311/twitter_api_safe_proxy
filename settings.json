@@ -1,34 +1,14 @@
 {
-  "port": 3000,
-  "logLevel": "info",
-  "profiles": [
-    {
-      "name": "account1",
-      "graphql": {
-        "endpoint": "https://x.com/i/api/graphql/"
-      },
-      "browser": {
-        "userDataDir": "./user_data/account1",
-        "headless": false,
-        "viewport": { "width": 1280, "height": 720 },
-        "userAgent": "Mozilla/5.0...",
-        "locale": "ja-JP",
-        "timezone": "Asia/Tokyo",
-        "storageStatePath": "./storage/account1.json"
-      }
-    }
-  ],
-  "pools": [
-    {
-      "name": "default",
-      "profiles": ["account1"],
-      "strategy": "round-robin",
-      "failover": {
-        "maxRetries": 3,
-        "retryDelay": 1000,
-        "cooldownPeriod": 300000
-      }
-    }
-  ],
-  "defaultPool": "default"
+	"port": 3000,
+	"logLevel": "info",
+	"profiles": [
+		{
+			"name": "account1",
+			"browser": {
+				"userDataDir": "./user_data/account1",
+				"headless": false,
+				"viewport": { "width": 1280, "height": 720 }
+			}
+		}
+	]
 }

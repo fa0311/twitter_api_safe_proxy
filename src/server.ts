@@ -1,133 +1,101 @@
-import { zValidator } from "@hono/zod-validator";
+import fs from "node:fs/promises";
+import { serve } from "@hono/node-server";
 import { Hono } from "hono";
-import { logger } from "hono/logger";
-import pino from "pino";
-import { z } from "zod";
+import { logger } from "./utils/logger.js";
+import { createProfile } from "./utils/profile.js";
+import { loadSettings } from "./utils/settings.js";
 
-const pinoLogger = pino({
-	level: process.env.LOG_LEVEL || "info",
-	transport:
-		process.env.NODE_ENV !== "production"
-			? {
-					target: "pino-pretty",
-					options: {
-						colorize: true,
-						translateTime: "HH:MM:ss Z",
-						ignore: "pid,hostname",
-					},
-				}
-			: undefined,
+const data = await fs.readFile("settings.json", "utf-8");
+const settings = await loadSettings(JSON.parse(data));
+
+logger.init({
+	level: settings.logLevel,
+	prettyPrint: settings.logPrettyPrint,
 });
 
-type Variables = {
-	logger: typeof pinoLogger;
+logger.info("Settings loaded successfully");
+
+const clients = await Promise.all(
+	settings.profiles.map(async (profile) => {
+		logger.info(`Profile: ${profile.name}, Browser: ${profile.browserType}`);
+		return await createProfile({
+			browserType: profile.browserType,
+			sleep: 5000,
+			options: {
+				headless: profile.browser.headless,
+				executablePath: profile.browser.executablePath,
+				env: profile.browser.env,
+				proxy: profile.browser.proxy,
+				args: ["--disable-blink-features=AutomationControlled", ...profile.browser.args],
+				viewport: profile.browser.viewport,
+			},
+			homeUrl: profile.home.url,
+			userDataDir: profile.browser.userDataDir,
+		});
+	}),
+);
+
+const getClient = () => clients[0]!;
+
+logger.info(`🚀 Server starting on http://localhost:${settings.port}`);
+
+const app = new Hono();
+
+const parseJsonParam = <T>(value: string | undefined): T | undefined => {
+	if (!value) return undefined;
+	return JSON.parse(value) as T;
 };
 
-const app = new Hono<{ Variables: Variables }>();
+app.get("/i/api/graphql/:queryId/:operationName", async (c) => {
+	const queryId = c.req.param("queryId");
+	const operationName = c.req.param("operationName");
 
-app.use("*", logger());
+	const variables = parseJsonParam(c.req.query("variables"));
+	const features = parseJsonParam(c.req.query("features"));
+	const fieldToggles = parseJsonParam(c.req.query("fieldToggles"));
 
-app.use("*", async (c, next) => {
-	c.set("logger", pinoLogger);
-	await next();
-});
-
-const UserSchema = z.object({
-	name: z.string().min(1, "Name is required"),
-	email: z.string().email("Invalid email format"),
-	age: z.number().int().positive().optional(),
-});
-
-const PostSchema = z.object({
-	title: z.string().min(1).max(100),
-	content: z.string().min(1),
-	tags: z.array(z.string()).optional(),
-});
-
-type User = z.infer<typeof UserSchema>;
-type Post = z.infer<typeof PostSchema>;
-
-app.get("/", (c) => {
-	return c.json({
-		message: "Welcome to Hono API with Zod validation!",
-		endpoints: {
-			GET: ["/health", "/users"],
-			POST: ["/users", "/posts"],
-		},
-	});
-});
-
-app.get("/health", (c) => {
-	return c.json({
-		status: "ok",
-		timestamp: new Date().toISOString(),
-	});
-});
-
-app.get("/users", (c) => {
-	const log = c.get("logger");
-	log.info("Fetching users list");
-
-	const users: User[] = [
-		{ name: "Alice", email: "alice@example.com", age: 25 },
-		{ name: "Bob", email: "bob@example.com", age: 30 },
-	];
-	return c.json({ users });
-});
-
-app.post("/users", zValidator("json", UserSchema), (c) => {
-	const log = c.get("logger");
-	const user = c.req.valid("json");
-
-	log.info({ user }, "Creating new user");
-
-	return c.json(
+	const client = getClient();
+	const result = await client.graphQLFullResponse(
 		{
-			message: "User created successfully",
-			user,
-		},
-		201,
-	);
-});
-
-app.post("/posts", zValidator("json", PostSchema), (c) => {
-	const post = c.req.valid("json");
-	return c.json(
-		{
-			message: "Post created successfully",
-			post: {
-				...post,
-				id: Math.random().toString(36).substring(7),
-				createdAt: new Date().toISOString(),
+			queryId,
+			operationName,
+			operationType: "query",
+			metadata: {
+				featureSwitches: Object.keys(features ?? {}),
+				fieldToggles: Object.keys(fieldToggles ?? {}),
 			},
 		},
-		201,
+		variables,
 	);
+	return c.json(result);
 });
 
-app.onError((err, c) => {
-	const log = c.get("logger");
-	log.error({ err, path: c.req.path }, "Request error occurred");
+app.post("/i/api/graphql/:queryId/:operationName", async (c) => {
+	const queryId = c.req.param("queryId");
+	const operationName = c.req.param("operationName");
+	const requestBody = await c.req.json();
 
-	return c.json(
+	const variables = requestBody?.variables ?? {};
+	const features = requestBody?.features ?? {};
+
+	const client = getClient();
+
+	const result = await client.graphQLFullResponse(
 		{
-			error: err.message || "Internal Server Error",
+			queryId,
+			operationName,
+			operationType: "query",
+			metadata: {
+				featureSwitches: Object.keys(features),
+				fieldToggles: [],
+			},
 		},
-		500,
+		variables,
 	);
+	return c.json(result);
 });
 
-app.notFound((c) => {
-	const log = c.get("logger");
-	log.warn({ path: c.req.path, method: c.req.method }, "Route not found");
-
-	return c.json({ error: "Not Found" }, 404);
-});
-
-const port = 3000;
-pinoLogger.info(`🚀 Server starting on http://localhost:${port}`);
-
-export default {
-	port,
+serve({
 	fetch: app.fetch,
-};
+	port: 3000,
+});
