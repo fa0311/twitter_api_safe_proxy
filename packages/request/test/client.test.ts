@@ -1,18 +1,53 @@
-import { chromium } from "playwright";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { type BrowserContext, chromium } from "playwright";
 import { createTwitterClient } from "twitter-api-safe-request";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+
+type Integration = {
+	temp: () => Promise<string>;
+	browser: () => Promise<BrowserContext>;
+	afterEachCall: () => Promise<void>;
+};
+
+const createIntegration = (): Integration => {
+	const cleanup: Array<() => Promise<void>> = [];
+
+	const temp = async () => {
+		const tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "github-archiver-test-"));
+		cleanup.push(() => fs.promises.rm(tempDir, { recursive: true, force: true }));
+		return tempDir;
+	};
+	const browser = async () => {
+		const browser = await chromium.launchPersistentContext(await temp(), {
+			headless: true,
+		});
+		cleanup.push(() => browser.close());
+		return browser;
+	};
+
+	const afterEachCall = async () => {
+		for (const fn of cleanup.reverse()) {
+			await fn();
+		}
+		cleanup.length = 0;
+	};
+
+	return { temp, browser, afterEachCall };
+};
 
 describe("someFunction", () => {
+	const integration = createIntegration();
+
+	afterEach(async () => integration.afterEachCall());
+
 	it("runs graphQLFullResponse through a persistent X profile", async () => {
-		const context = await chromium.launchPersistentContext("./user_data/account1", {
-			headless: false,
-		});
+		const context = await integration.browser();
 
 		const page = await context.newPage();
 		const client = await createTwitterClient(page);
-		await new Promise((resolve) => setTimeout(resolve, 5000));
 		await page.goto("https://x.com/home");
-		await new Promise((resolve) => setTimeout(resolve, 5000));
 
 		const result = await client.graphQLFullResponse(
 			{
@@ -82,7 +117,5 @@ describe("someFunction", () => {
 		const text = (result as any).data.tweetResult.result.legacy.full_text;
 
 		expect(text).toContain("Hey you …");
-
-		await context.close();
 	}, 120_000);
 });
