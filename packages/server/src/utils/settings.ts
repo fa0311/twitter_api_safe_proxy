@@ -44,11 +44,11 @@ export const loadSettings = async (data: unknown) => {
 	const settings = await SettingsSchema.safeParseAsync(data);
 	if (settings.success) {
 		return settings.data;
-	} else {
-		for (const iss of settings.error.issues) {
-			const path = iss.path?.length ? iss.path.join(".") : "(root)";
-			console.error(`[${iss.code}] path=${path} message=${iss.message}`);
-		}
-		throw new Error("Invalid settings");
 	}
+
+	for (const issue of settings.error.issues) {
+		const path = issue.path?.length ? issue.path.join(".") : "(root)";
+		console.error(`[${issue.code}] path=${path} message=${issue.message}`);
+	}
+	throw new Error("Invalid settings");
 };

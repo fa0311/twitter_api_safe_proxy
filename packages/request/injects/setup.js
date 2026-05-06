@@ -1,4 +1,5 @@
 // ref: https://github.com/tsukumijima/KonomiTV/blob/master/server/static/zendriver_setup.js
+
 (async () => {
 	const objectMocker = async (target, name) => {
 		let value = target[name];
@@ -18,6 +19,11 @@
 				},
 			});
 		});
+	};
+
+	globalThis.elonmusk_114514_request = async ({ property, query }) => {
+		console.log(`Requesting ${property} with query:`, query);
+		return client[property].apply(client, query);
 	};
 
 	const chunkArray = await objectMocker(window, "webpackChunk_twitter_responsive_web");
@@ -93,12 +99,7 @@
 			return originalPush(chunk);
 		};
 	});
+	chunkArray.push = originalPush;
 
 	console.log("Twitter API client found");
-
-	chunkArray.push = originalPush;
-	globalThis.elonmusk_114514_request = async ({ property, query }) => {
-		console.log(`Requesting ${property} with query:`, query);
-		return client[property].apply(client, query);
-	};
 })();

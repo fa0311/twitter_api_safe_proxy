@@ -1,5 +1,8 @@
 {
 	"$schema": "https://biomejs.dev/schemas/2.3.8/schema.json",
+	"files": {
+		"includes": ["**", "!**/dist", "!**/node_modules"]
+	},
 	"formatter": {
 		"lineWidth": 120
 	},
@@ -20,7 +23,7 @@
 	},
 	"overrides": [
 		{
-			"includes": ["injects/**/*.js"],
+			"includes": ["**/injects/**/*.js"],
 			"linter": {
 				"enabled": true,
 				"rules": {

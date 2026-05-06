@@ -37,6 +37,9 @@
     /* Completeness */
     "skipLibCheck": true
   },
-  "include": ["src/**/*", "injects"],
-  "exclude": ["node_modules", "dist"]
+  "files": [],
+  "references": [
+    { "path": "./packages/request" },
+    { "path": "./packages/server" }
+  ]
 }

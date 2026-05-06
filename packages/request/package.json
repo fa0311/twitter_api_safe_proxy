@@ -1,0 +1,42 @@
+{
+	"name": "twitter-api-safe-request",
+	"version": "1.0.0",
+	"description": "Safe request helpers for Twitter/X web API access through a Playwright profile.",
+	"type": "module",
+	"main": "dist/index.js",
+	"types": "dist/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
+		}
+	},
+	"files": [
+		"dist",
+		"injects",
+		"README.md"
+	],
+	"scripts": {
+		"build": "tsc -p tsconfig.json",
+		"prepack": "pnpm build",
+		"test": "vitest run",
+		"type-check": "tsc -p tsconfig.json --noEmit"
+	},
+	"keywords": [
+		"twitter",
+		"x",
+		"playwright",
+		"api"
+	],
+	"author": "",
+	"license": "ISC",
+	"peerDependencies": {
+		"playwright": ">=1.57.0 <2"
+	},
+	"devDependencies": {
+		"@types/node": "^25.0.2",
+		"playwright": "^1.57.0",
+		"typescript": "^5.9.3",
+		"vitest": "^4.1.5"
+	}
+}
