@@ -21,7 +21,7 @@
 		"automation"
 	],
 	"author": "",
-	"license": "ISC",
+	"license": "MIT",
 	"devDependencies": {
 		"@biomejs/biome": "^2.3.8",
 		"@types/node": "^25.0.2",

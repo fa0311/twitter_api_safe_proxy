@@ -30,7 +30,7 @@
 		"proxy"
 	],
 	"author": "",
-	"license": "ISC",
+	"license": "MIT",
 	"dependencies": {
 		"@hono/node-server": "^1.19.4",
 		"hono": "^4.11.0",
