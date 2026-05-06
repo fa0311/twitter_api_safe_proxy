@@ -98,6 +98,7 @@
 
 	chunkArray.push = originalPush;
 	globalThis.elonmusk_114514_request = async ({ property, query }) => {
+		console.log(`Requesting ${property} with query:`, query);
 		return client[property].apply(client, query);
 	};
 })();

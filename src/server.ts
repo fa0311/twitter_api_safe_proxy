@@ -84,7 +84,7 @@ app.post("/i/api/graphql/:queryId/:operationName", async (c) => {
 		{
 			queryId,
 			operationName,
-			operationType: "query",
+			operationType: "mutation",
 			metadata: {
 				featureSwitches: Object.keys(features),
 				fieldToggles: [],

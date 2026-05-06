@@ -12,7 +12,7 @@ type Profile = {
 type GraphQLRequest = {
 	queryId: string;
 	operationName: string;
-	operationType: "query";
+	operationType: "query" | "mutation";
 	metadata: {
 		featureSwitches: string[];
 		fieldToggles: string[];
