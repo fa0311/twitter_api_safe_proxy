@@ -1,45 +1,42 @@
 {
-  "compilerOptions": {
-    /* Language and Environment */
-    "target": "ES2023",
-    "lib": ["ES2023"],
-    "types": ["node"],
+	"compilerOptions": {
+		/* Language and Environment */
+		"target": "ES2023",
+		"lib": ["ES2023"],
+		"types": ["node"],
 
-    /* Modules */
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
-    "resolveJsonModule": true,
+		/* Modules */
+		"module": "NodeNext",
+		"moduleResolution": "NodeNext",
+		"resolveJsonModule": true,
 
-    /* Emit */
-    "noEmit": false,
-    "sourceMap": true,
-    "declaration": true,
-    "declarationMap": true,
-    "removeComments": false,
+		/* Emit */
+		"noEmit": false,
+		"sourceMap": true,
+		"declaration": true,
+		"declarationMap": true,
+		"removeComments": false,
 
-    /* Interop Constraints */
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "forceConsistentCasingInFileNames": true,
-    "isolatedModules": true,
-    "verbatimModuleSyntax": true,
+		/* Interop Constraints */
+		"esModuleInterop": true,
+		"allowSyntheticDefaultImports": true,
+		"forceConsistentCasingInFileNames": true,
+		"isolatedModules": true,
+		"verbatimModuleSyntax": true,
 
-    /* Type Checking */
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true,
-    "noUncheckedIndexedAccess": true,
-    "noImplicitOverride": true,
-    "allowUnusedLabels": false,
-    "allowUnreachableCode": false,
+		/* Type Checking */
+		"strict": true,
+		"noUnusedLocals": true,
+		"noUnusedParameters": true,
+		"noFallthroughCasesInSwitch": true,
+		"noUncheckedIndexedAccess": true,
+		"noImplicitOverride": true,
+		"allowUnusedLabels": false,
+		"allowUnreachableCode": false,
 
-    /* Completeness */
-    "skipLibCheck": true
-  },
-  "files": [],
-  "references": [
-    { "path": "./packages/request" },
-    { "path": "./packages/server" }
-  ]
+		/* Completeness */
+		"skipLibCheck": true
+	},
+	"files": [],
+	"references": [{ "path": "./packages/request" }, { "path": "./packages/debug" }, { "path": "./packages/server" }]
 }

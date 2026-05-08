@@ -6,14 +6,17 @@
 	"type": "module",
 	"scripts": {
 		"dev:proxy": "pnpm --filter twitter-api-safe-proxy dev",
+		"dev:debug": "pnpm --filter twitter-api-safe-debug dev",
 		"build:proxy": "pnpm --filter twitter-api-safe-proxy build",
+		"build:debug": "pnpm --filter twitter-api-safe-debug build",
 		"start:proxy": "pnpm --filter twitter-api-safe-proxy start",
+		"start:debug": "pnpm --filter twitter-api-safe-debug start",
 		"test:proxy": "pnpm --filter twitter-api-safe-request test",
 		"lint": "biome lint .",
 		"lint:fix": "biome lint --write .",
 		"format": "biome format --write .",
 		"check": "biome check --write .",
-		"type-check": "pnpm --filter twitter-api-safe-request type-check && pnpm --filter twitter-api-safe-proxy type-check"
+		"type-check": "pnpm --filter twitter-api-safe-request type-check && pnpm --filter twitter-api-safe-debug type-check && pnpm --filter twitter-api-safe-proxy type-check"
 	},
 	"keywords": [
 		"typescript",

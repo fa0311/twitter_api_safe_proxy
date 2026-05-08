@@ -15,14 +15,15 @@ export type GraphQLRequest = {
 export type TwitterApiProfileClient = {
 	graphQL: (param: GraphQLRequest, body: unknown) => Promise<unknown>;
 	graphQLFullResponse: (param: GraphQLRequest, body: unknown) => Promise<unknown>;
-	log: () => Promise<unknown[]>;
+	debugStream: ReadableStream<unknown>;
+	enableDebug: () => Promise<void>;
 	waitStartup: () => Promise<void>;
 	page: Page;
 };
 
 declare global {
 	var elonmusk_114514_request: (payload: unknown) => Promise<unknown>;
-	var elonmusk_114514_enable_debug: unknown[];
+	var elonmusk_114514_emit_debug: (entry: unknown) => Promise<void> | void;
 	var elonmusk_114514_wait_startup: {
 		promise: Promise<void>;
 	};
@@ -32,7 +33,16 @@ const defaultInjectSetupScriptPath = fileURLToPath(new URL("../injects/setup.js"
 
 export const createTwitterClient = async (page: Page): Promise<TwitterApiProfileClient> => {
 	const injectSetupScript = await fs.readFile(defaultInjectSetupScriptPath, "utf-8");
-	await page.addInitScript("globalThis.elonmusk_114514_enable_debug = []");
+	const [debugStream, debugWriter] = (() => {
+		const stream = new TransformStream<unknown, unknown>();
+		return [stream.readable, stream.writable.getWriter()];
+	})();
+
+	const enableDebug = async () => {
+		await page.exposeFunction("elonmusk_114514_emit_debug", (entry: unknown) => {
+			debugWriter.write(entry);
+		});
+	};
 	await page.addInitScript(injectSetupScript);
 
 	const graphQL = async (param: GraphQLRequest, body: unknown) => {
@@ -49,11 +59,7 @@ export const createTwitterClient = async (page: Page): Promise<TwitterApiProfile
 		});
 	};
 
-	const log = async () => {
-		return await page.evaluate(() => globalThis.elonmusk_114514_enable_debug);
-	};
-
 	const waitStartup = async () => await page.evaluate(() => globalThis.elonmusk_114514_wait_startup.promise);
 
-	return { graphQL, graphQLFullResponse, log, page, waitStartup };
+	return { graphQL, graphQLFullResponse, page, waitStartup, debugStream, enableDebug };
 };

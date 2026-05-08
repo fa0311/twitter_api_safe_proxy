@@ -1,6 +1,22 @@
 // ref: https://github.com/tsukumijima/KonomiTV/blob/master/server/static/zendriver_setup.js
 
 (async () => {
+
+	globalThis.elonmusk_114514_wait_startup = (() =>{
+		let resolveStartup;
+		return {
+			resolve: () => {
+				if (resolveStartup) {
+					resolveStartup();
+					resolveStartup = null;
+				}
+			},
+			promise: new Promise((resolve) => {
+				resolveStartup = resolve;
+			}),
+		}
+	})();
+
 	const objectMocker = async (target, name) => {
 		let value = target[name];
 
@@ -74,13 +90,12 @@
 							const constructionProxy = new Proxy(originalClass, {
 								construct(target, args, newTarget) {
 									const instance = Reflect.construct(target, args, newTarget);
-									if (Array.isArray(globalThis.elonmusk_114514_enable_debug)) {
-										instance.dispatch = (...args) => {
-											globalThis.elonmusk_114514_enable_debug.push(args);
-											return target.prototype.dispatch.apply(instance, args);
-										};
-									}
+									instance.dispatch = (...args) => {
+										globalThis.elonmusk_114514_emit_debug(args);
+										return target.prototype.dispatch.apply(instance, args);
+									};
 									resolve(instance);
+									globalThis.elonmusk_114514_wait_startup.resolve();
 									return instance;
 								},
 							});
