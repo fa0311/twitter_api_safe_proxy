@@ -1,41 +1,6 @@
-import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
-import { type BrowserContext, chromium } from "playwright";
+import { createIntegration } from "@twitter-api-safe/test-utils";
 import { createTwitterClient } from "twitter-api-safe-request";
 import { afterEach, describe, expect, it } from "vitest";
-
-type Integration = {
-	temp: () => Promise<string>;
-	browser: () => Promise<BrowserContext>;
-	afterEachCall: () => Promise<void>;
-};
-
-const createIntegration = (): Integration => {
-	const cleanup: Array<() => Promise<void>> = [];
-
-	const temp = async () => {
-		const tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "github-archiver-test-"));
-		cleanup.push(() => fs.promises.rm(tempDir, { recursive: true, force: true }));
-		return tempDir;
-	};
-	const browser = async () => {
-		const browser = await chromium.launchPersistentContext(await temp(), {
-			headless: true,
-		});
-		cleanup.push(() => browser.close());
-		return browser;
-	};
-
-	const afterEachCall = async () => {
-		for (const fn of cleanup.reverse()) {
-			await fn();
-		}
-		cleanup.length = 0;
-	};
-
-	return { temp, browser, afterEachCall };
-};
 
 describe("someFunction", () => {
 	const integration = createIntegration();

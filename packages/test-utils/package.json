@@ -1,0 +1,15 @@
+{
+	"name": "@twitter-api-safe/test-utils",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": {
+			"types": "./src/integration.ts",
+			"import": "./src/integration.ts"
+		}
+	},
+	"dependencies": {
+		"playwright": "^1.57.0"
+	}
+}

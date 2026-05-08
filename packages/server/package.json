@@ -42,6 +42,7 @@
 		"zod": "^4.1.13"
 	},
 	"devDependencies": {
+		"@twitter-api-safe/test-utils": "workspace:*",
 		"@types/node": "^25.0.2",
 		"tsx": "^4.21.0",
 		"typescript": "^5.9.3",

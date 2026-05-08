@@ -35,6 +35,7 @@
 		"playwright": ">=1.57.0 <2"
 	},
 	"devDependencies": {
+		"@twitter-api-safe/test-utils": "workspace:*",
 		"@types/node": "^25.0.2",
 		"playwright": "^1.57.0",
 		"rimraf": "^6.1.3",
