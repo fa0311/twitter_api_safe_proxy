@@ -19,6 +19,7 @@
 		"build": "tsc -p tsconfig.json",
 		"prepack": "pnpm build",
 		"start": "node dist/server.js",
+		"test": "vitest run",
 		"pretype-check": "pnpm --filter twitter-api-safe-request build",
 		"type-check": "tsc -p tsconfig.json --noEmit"
 	},
@@ -43,6 +44,7 @@
 	"devDependencies": {
 		"@types/node": "^25.0.2",
 		"tsx": "^4.21.0",
-		"typescript": "^5.9.3"
+		"typescript": "^5.9.3",
+		"vitest": "^4.1.5"
 	}
 }

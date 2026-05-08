@@ -40,6 +40,8 @@ const SettingsSchema = z.strictObject({
 	profiles: z.array(ProfileSchema).min(1, "At least one profile is required"),
 });
 
+export type Settings = z.infer<typeof SettingsSchema>;
+
 export const loadSettings = async (data: unknown) => {
 	const settings = await SettingsSchema.safeParseAsync(data);
 	if (settings.success) {
