@@ -87,7 +87,7 @@ const editorHighlightStyle = HighlightStyle.define(
 	}),
 );
 
-export function CodeEditor({ className, language, onChange, readOnly = false, value }: CodeEditorProps) {
+export const CodeEditor = ({ className, language, onChange, readOnly = false, value }: CodeEditorProps) => {
 	const hostRef = useRef<HTMLDivElement>(null);
 	const initialValueRef = useRef(value);
 	const viewRef = useRef<EditorView | null>(null);
@@ -155,4 +155,4 @@ export function CodeEditor({ className, language, onChange, readOnly = false, va
 	}, [value]);
 
 	return <div className={className} ref={hostRef} />;
-}
+};
