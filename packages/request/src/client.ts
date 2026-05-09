@@ -31,7 +31,7 @@ declare global {
 
 const defaultInjectSetupScriptPath = fileURLToPath(new URL("../injects/setup.js", import.meta.url));
 
-export const createTwitterClient = async (page: Page): Promise<TwitterApiProfileClient> => {
+export const injectTwitterClient = async (page: Page): Promise<TwitterApiProfileClient> => {
 	const injectSetupScript = await fs.readFile(defaultInjectSetupScriptPath, "utf-8");
 	const [debugStream, debugWriter] = (() => {
 		const stream = new TransformStream<unknown, unknown>();

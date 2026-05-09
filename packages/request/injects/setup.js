@@ -91,7 +91,9 @@
 								construct(target, args, newTarget) {
 									const instance = Reflect.construct(target, args, newTarget);
 									instance.dispatch = (...args) => {
-										globalThis.elonmusk_114514_emit_debug(args);
+										if (globalThis.elonmusk_114514_emit_debug) {
+										   globalThis.elonmusk_114514_emit_debug(args);
+										}
 										return target.prototype.dispatch.apply(instance, args);
 									};
 									resolve(instance);

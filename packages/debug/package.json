@@ -14,16 +14,16 @@
 	],
 	"scripts": {
 		"clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
-		"predev": "pnpm --filter twitter-api-safe-request build",
-		"dev": "tsx watch src/cli.ts",
-		"dev:ui": "vite --host 127.0.0.1",
-		"prebuild": "pnpm --filter twitter-api-safe-request build",
+		"predev": "pnpm --filter twitter-api-safe-proxy build",
+		"dev:api": "tsx watch src/cli.ts",
+		"dev:ui": "vite",
+		"prebuild": "pnpm --filter twitter-api-safe-proxy build",
 		"build": "pnpm clean && pnpm build:server && pnpm build:ui",
 		"build:server": "tsc -p tsconfig.json",
 		"build:ui": "vite build",
 		"prestart": "pnpm build",
 		"start": "node dist/cli.js",
-		"pretype-check": "pnpm --filter twitter-api-safe-request build",
+		"pretype-check": "pnpm --filter twitter-api-safe-proxy build",
 		"type-check": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.ui.json --noEmit"
 	},
 	"keywords": [
@@ -38,10 +38,11 @@
 	"dependencies": {
 		"@hono/node-server": "^1.19.4",
 		"hono": "^4.11.0",
-		"playwright": "^1.57.0",
 		"react": "^19.2.6",
 		"react-dom": "^19.2.6",
-		"twitter-api-safe-request": "workspace:*"
+		"twitter-api-safe-proxy": "workspace:*",
+		"twitter-api-safe-request": "workspace:*",
+		"zod": "^4.1.13"
 	},
 	"devDependencies": {
 		"@tailwindcss/vite": "^4.2.4",

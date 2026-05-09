@@ -1,6 +1,8 @@
 import { createIntegration } from "@twitter-api-safe/test-utils";
+import { injectTwitterClient } from "twitter-api-safe-request";
 import { afterEach, describe, expect, it } from "vitest";
 import createApp from "../src/app.js";
+import { createBrowser } from "../src/utils/browser.js";
 
 describe("someFunction", () => {
 	const integration = createIntegration();
@@ -8,27 +10,24 @@ describe("someFunction", () => {
 	afterEach(async () => integration.afterEachCall());
 
 	it("runs graphQLFullResponse through a persistent X profile", async () => {
-		const [app, clients] = await createApp({
-			port: 3000,
-			logLevel: "info",
-			logPrettyPrint: true,
-			profiles: [
-				{
-					name: "test-profile",
-					browserType: "chromium",
-					home: {
-						url: "https://x.com/home",
-					},
-					browser: {
-						headless: false,
-						userDataDir: await integration.temp(),
-						args: [],
-					},
-				},
-			],
+		const browser = await createBrowser({
+			browserType: "chromium",
+			userDataDir: await integration.temp(),
+			headless: false,
+			executablePath: undefined,
+			env: undefined,
+			proxy: undefined,
+			args: [],
+			viewport: undefined,
 		});
+		const page = await browser.newPage();
+		await page.goto("https://x.com/home");
+		const client = await injectTwitterClient(page);
+
+		const app = await createApp(() => client);
 		integration.cleanup(async () => {
-			await Promise.all(clients.map(([, context]) => context.close()));
+			await browser.close();
+			await page.close();
 		});
 
 		const params = new URLSearchParams({

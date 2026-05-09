@@ -3,8 +3,14 @@
 	"version": "1.0.0",
 	"description": "HTTP proxy server for safe Twitter/X web API requests through Playwright profiles.",
 	"type": "module",
-	"main": "dist/server.js",
-	"types": "dist/server.d.ts",
+	"main": "dist/index.js",
+	"types": "dist/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
+		}
+	},
 	"bin": {
 		"twitter-api-safe-proxy": "dist/server.js"
 	},

@@ -5,9 +5,9 @@
 		{
 			"name": "account1",
 			"browser": {
-				"userDataDir": "./user_data/account1",
+				"userDataDir": "./../../user_data/account1",
 				"headless": false,
-				"viewport": { "width": 1280, "height": 720 }
+				"viewport": { "width": 720, "height": 720 }
 			}
 		}
 	]

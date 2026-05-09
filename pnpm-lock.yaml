@@ -26,18 +26,21 @@ importers:
       hono:
         specifier: ^4.11.0
         version: 4.11.0
-      playwright:
-        specifier: ^1.57.0
-        version: 1.57.0
       react:
         specifier: ^19.2.6
         version: 19.2.6
       react-dom:
         specifier: ^19.2.6
         version: 19.2.6(react@19.2.6)
+      twitter-api-safe-proxy:
+        specifier: workspace:*
+        version: link:../server
       twitter-api-safe-request:
         specifier: workspace:*
         version: link:../request
+      zod:
+        specifier: ^4.1.13
+        version: 4.1.13
     devDependencies:
       '@tailwindcss/vite':
         specifier: ^4.2.4

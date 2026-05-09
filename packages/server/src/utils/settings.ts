@@ -42,15 +42,4 @@ const SettingsSchema = z.strictObject({
 
 export type Settings = z.infer<typeof SettingsSchema>;
 
-export const loadSettings = async (data: unknown) => {
-	const settings = await SettingsSchema.safeParseAsync(data);
-	if (settings.success) {
-		return settings.data;
-	}
-
-	for (const issue of settings.error.issues) {
-		const path = issue.path?.length ? issue.path.join(".") : "(root)";
-		console.error(`[${issue.code}] path=${path} message=${issue.message}`);
-	}
-	throw new Error("Invalid settings");
-};
+export const loadSettings = (data: unknown) => SettingsSchema.parseAsync(data);

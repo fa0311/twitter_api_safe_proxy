@@ -1,18 +1,14 @@
 import fs from "node:fs/promises";
 import { serve } from "@hono/node-server";
-import { Hono } from "hono";
-import { createApp, createBrowser, loadSettings } from "twitter-api-safe-proxy";
 import { injectTwitterClient } from "twitter-api-safe-request";
-import { createDebugApp } from "./app.js";
+import createApp from "./app.js";
+import { createBrowser } from "./utils/browser.js";
 import { createLogger } from "./utils/logger.js";
 import { randomChoice } from "./utils/random.js";
+import { loadSettings } from "./utils/settings.js";
 
 const settings = await loadSettings(JSON.parse(await fs.readFile("./../../settings.json", "utf-8")));
 const logger = createLogger({ logLevel: settings.logLevel, logPrettyPrint: settings.logPrettyPrint });
-
-const { app: debugApi, emit } = createDebugApp();
-const api = await createApp(() => randomChoice(browser));
-
 const browser = await Promise.all(
 	settings.profiles.map(async (profile) => {
 		const browser = await createBrowser({
@@ -27,18 +23,12 @@ const browser = await Promise.all(
 		});
 		logger.info(`Browser for profile "${profile.name}" launched successfully`);
 		const page = await browser.newPage();
-		const client = await injectTwitterClient(page);
-		await page.goto("https://x.com");
-		await page.waitForURL("https://x.com/home");
-		await client.enableDebug();
-		void client.debugStream.pipeTo(new WritableStream({ write: emit }));
+		const client = injectTwitterClient(page);
+		await page.goto(profile.home.url);
 		return client;
 	}),
 );
 
-const app = new Hono();
+const app = await createApp(() => randomChoice(browser));
 
-app.route("/", debugApi);
-app.route("/i/api/graphql", api);
-
-serve({ fetch: app.fetch, port: 3001 });
+serve({ fetch: app.fetch, port: settings.port });

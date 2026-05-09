@@ -1,20 +1,11 @@
 import { Hono } from "hono";
 import { streamSSE } from "hono/streaming";
 
-const waitUntilAbort = async (signal: AbortSignal) => {
-	if (signal.aborted) {
-		return;
-	}
-	await new Promise<void>((resolve) => {
-		signal.addEventListener("abort", () => resolve(), { once: true });
-	});
-};
-
 export const createDebugApp = () => {
 	const listeners = new Set<(entry: unknown) => void>();
 	const app = new Hono();
 
-	app.get("/debug/events", (c) =>
+	app.get("/api/events", (c) =>
 		streamSSE(c, async (stream) => {
 			const listener = (entry: unknown) => {
 				void stream.writeSSE({
@@ -24,7 +15,12 @@ export const createDebugApp = () => {
 			};
 			listeners.add(listener);
 
-			await waitUntilAbort(c.req.raw.signal);
+			const { signal } = c.req.raw;
+			if (!signal.aborted) {
+				await new Promise<void>((resolve) => {
+					signal.addEventListener("abort", () => resolve(), { once: true });
+				});
+			}
 			listeners.delete(listener);
 		}),
 	);

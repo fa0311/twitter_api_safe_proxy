@@ -3,7 +3,7 @@
 HTTP proxy server for safe Twitter/X web API requests through Playwright profiles.
 
 ```sh
-twitter-api-safe-proxy --settings settings.json
+twitter-api-safe-proxy
 ```
 
-The settings file path can also be provided through `TWITTER_API_SAFE_PROXY_SETTINGS`.
+Reads settings from `../settings.json` relative to the working directory. In this workspace, the shared default settings file lives at `packages/settings.json`.

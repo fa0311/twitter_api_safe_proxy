@@ -1,110 +1,146 @@
-import { StrictMode, useEffect, useState } from "react";
+import { StrictMode, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
+import { toCreateAppReplayRequest } from "../shared/graphqlReplay";
+import { DetailPane } from "./components/DetailPane";
+import { EntrySidebar } from "./components/EntrySidebar";
+import { labelOf, searchTextOf } from "./entryUtils";
 import "./style.css";
-
-type DebugEntry = any;
-
-const findByKey = (value: unknown, key: string, depth = 0, seen = new WeakSet<object>()): unknown => {
-	if (depth > 8 || value === null || value === undefined || typeof value !== "object") {
-		return undefined;
-	}
-	if (seen.has(value)) {
-		return undefined;
-	}
-	seen.add(value);
-
-	if (Object.hasOwn(value, key)) {
-		return (value as Record<string, unknown>)[key];
-	}
-
-	const values = Array.isArray(value) ? value : Object.values(value);
-	for (const item of values) {
-		const found = findByKey(item, key, depth + 1, seen);
-		if (found !== undefined) {
-			return found;
-		}
-	}
-	return undefined;
-};
-
-const labelOf = (entry: DebugEntry) =>
-	findByKey(entry, "operationName") ?? findByKey(entry, "url") ?? findByKey(entry, "property") ?? "entry";
-
-const metaOf = (entry: DebugEntry) =>
-	[
-		findByKey(entry, "property"),
-		findByKey(entry, "operationType"),
-		findByKey(entry, "method"),
-		findByKey(entry, "queryId"),
-	]
-		.filter(Boolean)
-		.join(" | ");
+import type { DetailTab, MethodFilter, ReplayState, SortMode } from "./types";
+import { useDebugEntries } from "./useDebugEntries";
 
 function App() {
-	const [entries, setEntries] = useState<DebugEntry[]>([]);
-	const [selectedIndex, setSelectedIndex] = useState<number>();
-	const [connected, setConnected] = useState(false);
+	const { clearEntries, connected, entries, selectedId, setSelectedId } = useDebugEntries();
+	const [methodFilter, setMethodFilter] = useState<MethodFilter>("all");
+	const [onlyReplayable, setOnlyReplayable] = useState(false);
+	const [query, setQuery] = useState("");
+	const [sortMode, setSortMode] = useState<SortMode>("newest");
+	const [tab, setTab] = useState<DetailTab>("request");
+	const [replayById, setReplayById] = useState<Record<number, ReplayState>>({});
 
-	useEffect(() => {
-		const source = new EventSource("/debug/events");
+	const stats = useMemo(
+		() => ({
+			get: entries.filter((entry) => entry.graphQL?.method === "GET").length,
+			graphQL: entries.filter((entry) => entry.graphQL).length,
+			post: entries.filter((entry) => entry.graphQL?.method === "POST").length,
+			total: entries.length,
+		}),
+		[entries],
+	);
 
-		source.addEventListener("open", () => setConnected(true));
-		source.addEventListener("error", () => setConnected(false));
-		source.addEventListener("entry", (event) => {
-			const entry = JSON.parse(event.data);
-			setEntries((current) => [...current, entry]);
-			setSelectedIndex((current) => current ?? 0);
+	const visibleEntries = useMemo(() => {
+		const normalizedQuery = query.trim().toLowerCase();
+		const filtered = entries.filter((entry) => {
+			if (onlyReplayable && !entry.graphQL) {
+				return false;
+			}
+			if (methodFilter !== "all" && entry.graphQL?.method !== methodFilter) {
+				return false;
+			}
+			if (normalizedQuery && !searchTextOf(entry).includes(normalizedQuery)) {
+				return false;
+			}
+			return true;
 		});
 
-		return () => source.close();
-	}, []);
+		return filtered.toSorted((left, right) => {
+			if (sortMode === "oldest") {
+				return left.receivedAt - right.receivedAt;
+			}
+			if (sortMode === "operation") {
+				return String(labelOf(left)).localeCompare(String(labelOf(right)));
+			}
+			if (sortMode === "method") {
+				return String(left.graphQL?.method ?? "RAW").localeCompare(String(right.graphQL?.method ?? "RAW"));
+			}
+			return right.receivedAt - left.receivedAt;
+		});
+	}, [entries, methodFilter, onlyReplayable, query, sortMode]);
 
-	const selected = selectedIndex === undefined ? undefined : entries[selectedIndex];
+	const selected = entries.find((entry) => entry.id === selectedId);
+	const selectedReplayState = selected ? replayById[selected.id] ?? { status: "idle" as const } : undefined;
+
+	const clearAll = () => {
+		clearEntries();
+		setReplayById({});
+	};
+
+	const replaySelected = async () => {
+		if (!selected?.graphQL) {
+			return;
+		}
+
+		setReplayById((current) => ({ ...current, [selected.id]: { status: "loading" } }));
+		setTab("response");
+
+		const replay = toCreateAppReplayRequest(selected.graphQL);
+
+		try {
+			const response = await fetch(replay.path, {
+				method: replay.method,
+				headers: replay.body ? { "content-type": "application/json" } : undefined,
+				body: replay.body ? JSON.stringify(replay.body) : undefined,
+			});
+			const payload = await response.json().catch(() => null);
+			setReplayById((current) => ({
+				...current,
+				[selected.id]: {
+					result: {
+						finishedAt: Date.now(),
+						payload,
+						status: response.status,
+					},
+					status: "done",
+				},
+			}));
+		} catch (error) {
+			setReplayById((current) => ({
+				...current,
+				[selected.id]: {
+					message: error instanceof Error ? error.message : "Replay failed",
+					status: "error",
+				},
+			}));
+		}
+	};
 
 	return (
-		<div className="grid min-h-screen grid-rows-[auto_1fr] bg-[#f6f7f9] font-sans text-[#18202a]">
-			<header className="flex items-center gap-3 border-[#d8dee8] border-b bg-white px-4 py-3">
-				<div className="mr-auto font-bold">Twitter API Debug</div>
-				<div className="inline-flex items-center gap-2 text-[#586577] text-[13px]">
-					<span className={`h-2 w-2 rounded-full ${connected ? "bg-[#168a55]" : "bg-[#b3261e]"}`} />
-					{connected ? "Connected" : "Disconnected"}
+		<div className="grid min-h-screen grid-rows-[auto_1fr] bg-[#f5f7fa] font-sans text-[#17202c]">
+			<header className="border-[#d9e0ea] border-b bg-white px-5 py-3">
+				<div className="flex flex-wrap items-center gap-3">
+					<div className="mr-auto">
+						<div className="font-bold text-[15px]">Twitter API Debug</div>
+						<div className="text-[#667386] text-xs">Captured createApp traffic and GraphQL replay</div>
+					</div>
+					<div className="inline-flex items-center gap-2 rounded border border-[#d9e0ea] px-2.5 py-1 text-[#586577] text-xs">
+						<span className={`h-2 w-2 rounded-full ${connected ? "bg-[#168a55]" : "bg-[#b3261e]"}`} />
+						{connected ? "Connected" : "Disconnected"}
+					</div>
 				</div>
 			</header>
-			<main className="grid min-h-0 grid-cols-[minmax(320px,42%)_minmax(0,1fr)] max-[800px]:grid-cols-1 max-[800px]:grid-rows-[42vh_1fr]">
-				<section className="overflow-auto border-[#d8dee8] border-r bg-white max-[800px]:border-r-0 max-[800px]:border-b">
-					{entries.length === 0 ? (
-						<div className="p-4 text-[#667386]">No entries</div>
-					) : (
-						entries
-							.map((entry, index) => ({ entry, index }))
-							.toReversed()
-							.map(({ entry, index }) => (
-								<button
-									className={`grid w-full cursor-pointer grid-cols-[84px_minmax(0,1fr)] gap-3 border-0 border-[#edf0f4] border-b bg-transparent px-3.5 py-2.5 text-left hover:bg-[#eef5ff] ${
-										index === selectedIndex ? "bg-[#eef5ff]" : ""
-									}`}
-									key={index}
-									type="button"
-									onClick={() => setSelectedIndex(index)}
-								>
-									<span className="whitespace-nowrap font-mono text-[#667386] text-xs">#{index + 1}</span>
-									<span className="min-w-0">
-										<span className="block overflow-hidden text-ellipsis whitespace-nowrap font-semibold">
-											{String(labelOf(entry))}
-										</span>
-										<span className="mt-0.5 block overflow-hidden text-ellipsis whitespace-nowrap text-[#667386] text-xs">
-											{metaOf(entry)}
-										</span>
-									</span>
-								</button>
-							))
-					)}
-				</section>
-				<section className="min-w-0 overflow-auto p-4">
-					<pre className="m-0 whitespace-pre-wrap break-words font-mono text-xs leading-relaxed">
-						{selected ? JSON.stringify(selected, null, 2) : "No entry selected"}
-					</pre>
-				</section>
+
+			<main className="grid min-h-0 grid-cols-[minmax(360px,44%)_minmax(0,1fr)] max-[900px]:grid-cols-1 max-[900px]:grid-rows-[minmax(420px,48vh)_1fr]">
+				<EntrySidebar
+					entries={visibleEntries}
+					methodFilter={methodFilter}
+					onlyReplayable={onlyReplayable}
+					query={query}
+					selectedId={selectedId}
+					sortMode={sortMode}
+					stats={stats}
+					onClear={clearAll}
+					onMethodFilterChange={setMethodFilter}
+					onOnlyReplayableChange={setOnlyReplayable}
+					onQueryChange={setQuery}
+					onSelect={setSelectedId}
+					onSortModeChange={setSortMode}
+				/>
+				<DetailPane
+					replayState={selectedReplayState}
+					selected={selected}
+					tab={tab}
+					onReplay={replaySelected}
+					onTabChange={setTab}
+				/>
 			</main>
 		</div>
 	);
