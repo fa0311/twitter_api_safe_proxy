@@ -1,1 +1,29 @@
 @import "tailwindcss";
+
+@keyframes entry-row-new {
+	0% {
+		background-color: #dbeafe;
+		box-shadow: inset 3px 0 0 #2563eb;
+	}
+
+	60% {
+		background-color: #eff6ff;
+		box-shadow: inset 3px 0 0 #60a5fa;
+	}
+
+	100% {
+		background-color: transparent;
+		box-shadow: inset 0 0 0 transparent;
+	}
+}
+
+.entry-row-new {
+	animation: entry-row-new 1500ms ease-out;
+	will-change: background-color, box-shadow, transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.entry-row-new {
+		animation: none;
+	}
+}

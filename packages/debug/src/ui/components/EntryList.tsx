@@ -5,12 +5,10 @@ import { MethodBadge } from "./MethodBadge";
 
 type Props = {
 	entries: DebugEntry[];
+	newEntryIds: ReadonlySet<number>;
 };
 
-export const EntryList = ({ entries }: Props) => {
-	const selectedEntryId = useEntrySelectionStore((s) => s.selectedEntryId);
-	const selectEntry = useEntrySelectionStore((s) => s.selectEntry);
-
+export const EntryList = ({ entries, newEntryIds }: Props) => {
 	if (entries.length === 0) {
 		return (
 			<div className="min-h-0 overflow-y-auto overscroll-contain">
@@ -22,34 +20,40 @@ export const EntryList = ({ entries }: Props) => {
 	return (
 		<div className="min-h-0 overflow-y-auto overscroll-contain">
 			{entries.map((entry) => (
-				<EntryRow
-					entry={entry}
-					key={entry.id}
-					selected={entry.id === selectedEntryId}
-					onSelect={() => selectEntry(entry.id)}
-				/>
+				<EntryRow entry={entry} key={entry.id} newlyAdded={newEntryIds.has(entry.id)} />
 			))}
 		</div>
 	);
 };
 
-const EntryRow = ({ entry, onSelect, selected }: { entry: DebugEntry; onSelect: () => void; selected: boolean }) => (
-	<button
-		className={`grid w-full cursor-pointer gap-2 border-0 border-[#edf0f4] border-b bg-transparent px-3.5 py-3 text-left hover:bg-[#f4f8ff] ${selected ? "bg-[#edf5ff]" : ""}`}
-		type="button"
-		onClick={onSelect}
-	>
-		<span className="flex min-w-0 items-center gap-2">
-			<MethodBadge method={entry.method} />
-			<span className="rounded border border-[#d7dce4] bg-[#f3f5f8] px-1.5 py-0.5 font-bold text-[#536173] text-[11px]">
-				{entry.version}
+type EntryRowProps = {
+	entry: DebugEntry;
+	newlyAdded: boolean;
+};
+
+const EntryRow = ({ entry, newlyAdded }: EntryRowProps) => {
+	const selected = useEntrySelectionStore((s) => s.selectedEntryId === entry.id);
+	const selectEntry = useEntrySelectionStore((s) => s.selectEntry);
+
+	return (
+		<button
+			aria-current={selected ? "true" : undefined}
+			className={`grid w-full cursor-pointer gap-2 border-0 border-[#edf0f4] border-b bg-transparent px-3.5 py-3 text-left hover:bg-[#f4f8ff] ${selected ? "bg-[#edf5ff]" : ""} ${newlyAdded ? "entry-row-new" : ""}`}
+			type="button"
+			onClick={() => selectEntry(entry.id)}
+		>
+			<span className="flex min-w-0 items-center gap-2">
+				<MethodBadge method={entry.method} />
+				<span className="rounded border border-[#d7dce4] bg-[#f3f5f8] px-1.5 py-0.5 font-bold text-[#536173] text-[11px]">
+					{entry.version}
+				</span>
+				<span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap font-semibold text-sm">
+					{entry.label}
+				</span>
+				<span className="ml-auto whitespace-nowrap font-mono text-[#667386] text-[11px]">#{entry.id}</span>
 			</span>
-			<span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap font-semibold text-sm">
-				{entry.label}
-			</span>
-			<span className="ml-auto whitespace-nowrap font-mono text-[#667386] text-[11px]">#{entry.id}</span>
-		</span>
-		<span className="overflow-hidden text-ellipsis whitespace-nowrap text-[#667386] text-xs">{entry.path}</span>
-		<span className="text-[#7a8697] text-[11px]">{formatTime(entry.receivedAt)}</span>
-	</button>
-);
+			<span className="overflow-hidden text-ellipsis whitespace-nowrap text-[#667386] text-xs">{entry.path}</span>
+			<span className="text-[#7a8697] text-[11px]">{formatTime(entry.receivedAt)}</span>
+		</button>
+	);
+};
