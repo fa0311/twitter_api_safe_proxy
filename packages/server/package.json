@@ -12,7 +12,8 @@
 		}
 	},
 	"bin": {
-		"twitter-api-safe-proxy": "dist/server.js"
+		"twitter-api-safe-proxy": "dist/server.js",
+		"twitter-api-safe-debug": "dist/dashboard/server.js"
 	},
 	"files": [
 		"dist",
@@ -21,10 +22,12 @@
 	"scripts": {
 		"predev": "pnpm --filter twitter-api-safe-request build",
 		"dev": "tsx watch src/server.ts",
+		"dev:debug": "tsx watch src/dashboard/server.ts",
 		"prebuild": "pnpm --filter twitter-api-safe-request build",
 		"build": "tsc -p tsconfig.json",
 		"prepack": "pnpm build",
 		"start": "node dist/server.js",
+		"start:debug": "node dist/dashboard/server.js",
 		"test": "vitest run",
 		"pretype-check": "pnpm --filter twitter-api-safe-request build",
 		"type-check": "tsc -p tsconfig.json --noEmit"

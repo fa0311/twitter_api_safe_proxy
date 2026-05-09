@@ -1,47 +1,28 @@
 {
 	"name": "twitter-api-safe-debug",
 	"version": "0.0.1",
-	"description": "Debug UI for Twitter/X web API requests captured through twitter-api-safe-request.",
+	"description": "Vite debug dashboard for Twitter/X web API requests captured through twitter-api-safe-request.",
 	"type": "module",
-	"main": "dist/index.js",
-	"types": "dist/index.d.ts",
-	"bin": {
-		"twitter-api-safe-debug": "dist/cli.js"
-	},
-	"files": [
-		"dist",
-		"README.md"
-	],
 	"scripts": {
 		"clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
-		"predev": "pnpm --filter twitter-api-safe-proxy build",
-		"dev:api": "tsx watch src/cli.ts",
-		"dev:ui": "vite",
-		"prebuild": "pnpm --filter twitter-api-safe-proxy build",
-		"build": "pnpm clean && pnpm build:server && pnpm build:ui",
-		"build:server": "tsc -p tsconfig.json",
-		"build:ui": "vite build",
-		"prestart": "pnpm build",
-		"start": "node dist/cli.js",
-		"pretype-check": "pnpm --filter twitter-api-safe-proxy build",
-		"type-check": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.ui.json --noEmit"
+		"dev": "vite",
+		"build": "pnpm clean && vite build",
+		"preview": "vite preview",
+		"type-check": "tsc -p tsconfig.json --noEmit"
 	},
 	"keywords": [
 		"twitter",
 		"x",
-		"hono",
-		"playwright",
+		"vite",
+		"react",
+		"dashboard",
 		"debug"
 	],
 	"author": "",
 	"license": "MIT",
 	"dependencies": {
-		"@hono/node-server": "^1.19.4",
-		"hono": "^4.11.0",
 		"react": "^19.2.6",
 		"react-dom": "^19.2.6",
-		"twitter-api-safe-proxy": "workspace:*",
-		"twitter-api-safe-request": "workspace:*",
 		"zod": "^4.1.13"
 	},
 	"devDependencies": {
@@ -51,7 +32,6 @@
 		"@types/react-dom": "^19.2.3",
 		"@vitejs/plugin-react": "^6.0.1",
 		"tailwindcss": "^4.2.4",
-		"tsx": "^4.21.0",
 		"typescript": "^5.9.3",
 		"vite": "^8.0.11"
 	}

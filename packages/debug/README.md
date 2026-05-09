@@ -1,16 +1,6 @@
 # twitter-api-safe-debug
 
-Debug UI for Twitter/X web API requests captured through `twitter-api-safe-request`.
-
-```sh
-twitter-api-safe-debug
-```
-
-Reads settings from `../settings.json` relative to the working directory.
-
-The debug command starts the `twitter-api-safe-proxy` `createApp` server, attaches the `/api/events` SSE endpoint to the same Hono app, and the UI replays captured GraphQL requests by hitting `/i/api/graphql/:queryId/:operationName` directly.
-
-Run the debug API and Vite UI together:
+Vite debug dashboard for Twitter/X web API requests captured through `twitter-api-safe-request`.
 
 ```sh
 pnpm --filter twitter-api-safe-debug dev
@@ -18,4 +8,17 @@ pnpm --filter twitter-api-safe-debug dev
 
 Open `http://localhost:3000`.
 
-In dev mode, the UI runs on port `3000` and proxies `/api/events` plus `/i/api/graphql/*` to the debug API on port `3001`.
+This package only owns the Vite UI. The debug API and replay proxy live in `twitter-api-safe-proxy` under `src/dashboard`:
+
+```sh
+pnpm --filter twitter-api-safe-proxy dev:debug
+```
+
+In dev mode, the UI runs on port `3000` and proxies `/api/events` plus `/i/api/graphql/*` to the debug server on port `3001`.
+
+From the repository root, run these in separate terminals:
+
+```sh
+pnpm dev:debug:server
+pnpm dev:debug
+```
