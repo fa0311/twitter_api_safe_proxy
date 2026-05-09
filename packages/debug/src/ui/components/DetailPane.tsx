@@ -1,32 +1,82 @@
 import { countKeys, labelOf, metaOf, methodBadgeClass, stringify } from "../entryUtils";
-import type { DebugEntry, DetailTab, ReplayState } from "../types";
+import type { DebugEntry, DetailTab, ExecutionState } from "../types";
+import { CodeEditor } from "./CodeEditor";
+import { ScriptEditor } from "./ScriptEditor";
 
 type DetailPaneProps = {
-	onReplay: () => void;
+	executionState?: ExecutionState;
+	onExecute: () => void;
+	onScriptChange: (script: string) => void;
 	onTabChange: (tab: DetailTab) => void;
-	replayState?: ReplayState;
+	script: string;
 	selected?: DebugEntry;
 	tab: DetailTab;
 };
 
-const detailPayloadOf = (selected: DebugEntry | undefined, tab: DetailTab, replayState: ReplayState | undefined) => {
-	if (tab === "request") {
-		return selected?.graphQL ?? selected?.raw;
+const capturedResponseOf = (selected: DebugEntry | undefined) => {
+	if (!selected) {
+		return undefined;
 	}
-	if (tab === "raw") {
-		return selected?.raw;
+	if (selected.response !== undefined) {
+		return selected.response;
 	}
-	return replayState;
+	if (selected.error !== undefined) {
+		return { error: selected.error };
+	}
+	return undefined;
 };
 
-export function DetailPane({ onReplay, onTabChange, replayState, selected, tab }: DetailPaneProps) {
-	const detailPayload = detailPayloadOf(selected, tab, replayState);
+const responsePayloadOf = (selected: DebugEntry | undefined, executionState: ExecutionState | undefined) => {
+	const captured = capturedResponseOf(selected);
+	const execution = executionState?.status === "idle" ? undefined : executionState;
+
+	if (captured !== undefined && execution !== undefined) {
+		return { captured, execution };
+	}
+
+	return execution ?? captured;
+};
+
+const detailPayloadOf = (
+	selected: DebugEntry | undefined,
+	tab: DetailTab,
+	executionState: ExecutionState | undefined,
+) => {
+	if (tab === "request") {
+		return selected?.graphQL ?? selected?.request;
+	}
+	if (tab === "javascript") {
+		return undefined;
+	}
+	return responsePayloadOf(selected, executionState);
+};
+
+const detailTabLabel: Record<DetailTab, string> = {
+	javascript: "JavaScript",
+	request: "Request",
+	response: "Response",
+};
+
+export function DetailPane({
+	executionState,
+	onExecute,
+	onScriptChange,
+	onTabChange,
+	script,
+	selected,
+	tab,
+}: DetailPaneProps) {
+	const canEditScript = Boolean(selected?.graphQL);
+	const detailTabs: DetailTab[] = canEditScript ? ["request", "response", "javascript"] : ["request", "response"];
+	const activeTab = tab === "javascript" && !canEditScript ? "request" : tab;
+	const detailPayload = detailPayloadOf(selected, activeTab, executionState);
+	const detailText = detailPayload !== undefined ? (stringify(detailPayload) ?? String(detailPayload)) : undefined;
 
 	return (
-		<section className="grid min-h-0 grid-rows-[auto_1fr]">
+		<section className="grid min-h-0 grid-rows-[auto_minmax(0,1fr)] overflow-hidden">
 			<div className="border-[#d9e0ea] border-b bg-white px-4 py-3">
 				{selected ? (
-					<div className="flex flex-wrap items-center gap-3">
+					<div className="flex min-w-0 flex-wrap items-center gap-3">
 						<div className="min-w-0">
 							<div className="flex min-w-0 items-center gap-2">
 								<span
@@ -44,14 +94,6 @@ export function DetailPane({ onReplay, onTabChange, replayState, selected, tab }
 								{metaOf(selected) || `Entry #${selected.id}`}
 							</div>
 						</div>
-						<button
-							className="ml-auto h-9 rounded bg-[#14532d] px-4 font-semibold text-sm text-white hover:bg-[#166534] disabled:cursor-not-allowed disabled:bg-[#aab4c1]"
-							disabled={!selected.graphQL || replayState?.status === "loading"}
-							type="button"
-							onClick={onReplay}
-						>
-							{replayState?.status === "loading" ? "Replaying" : "Replay"}
-						</button>
 					</div>
 				) : (
 					<div className="text-[#667386] text-sm">Select an entry to inspect</div>
@@ -86,26 +128,44 @@ export function DetailPane({ onReplay, onTabChange, replayState, selected, tab }
 							</div>
 						) : null}
 
-						<div className="flex flex-wrap items-center gap-2">
-							{(["request", "raw", "response"] as const).map((value) => (
-								<button
-									className={`h-8 rounded border px-3 text-sm ${
-										tab === value
-											? "border-[#2563eb] bg-[#eff6ff] text-[#1d4ed8]"
-											: "border-[#cfd7e3] bg-white text-[#536173] hover:bg-[#f3f6fa]"
-									}`}
-									key={value}
-									type="button"
-									onClick={() => onTabChange(value)}
-								>
-									{value === "request" ? "Request" : value === "raw" ? "Raw" : "Response"}
-								</button>
-							))}
-						</div>
+						<div className="grid min-h-[320px] grid-rows-[auto_minmax(0,1fr)] gap-2">
+							<div className="flex flex-wrap items-center gap-2">
+								{detailTabs.map((value) => (
+									<button
+										className={`h-8 rounded border px-3 text-sm ${
+											activeTab === value
+												? "border-[#2563eb] bg-[#eff6ff] text-[#1d4ed8]"
+												: "border-[#cfd7e3] bg-white text-[#536173] hover:bg-[#f3f6fa]"
+										}`}
+										key={value}
+										type="button"
+										onClick={() => onTabChange(value)}
+									>
+										{detailTabLabel[value]}
+									</button>
+								))}
+							</div>
 
-						<pre className="m-0 min-h-[360px] overflow-auto rounded border border-[#d9e0ea] bg-white p-4 font-mono text-xs leading-relaxed text-[#17202c]">
-							{detailPayload ? stringify(detailPayload) : "No replay response yet"}
-						</pre>
+							{activeTab === "javascript" && canEditScript ? (
+								<ScriptEditor
+									executionState={executionState}
+									script={script}
+									onExecute={onExecute}
+									onScriptChange={onScriptChange}
+								/>
+							) : detailText ? (
+								<CodeEditor
+									className="min-h-[260px] overflow-hidden rounded border border-[#d9e0ea] bg-white"
+									language="json"
+									readOnly={true}
+									value={detailText}
+								/>
+							) : (
+								<div className="min-h-[260px] rounded border border-[#d9e0ea] bg-white p-4 text-[#667386] text-sm">
+									{activeTab === "request" ? "No request captured" : "No response captured yet"}
+								</div>
+							)}
+						</div>
 					</div>
 				) : (
 					<div className="rounded border border-[#d9e0ea] bg-white p-5 text-[#667386] text-sm">

@@ -10,10 +10,13 @@ const CapturedGraphQLDataSchema = z.looseObject({
 });
 
 const CapturedGraphQLCandidateSchema = z.looseObject({
-	data: CapturedGraphQLDataSchema.optional(),
-	headers: UnknownRecordSchema.optional(),
+	data: z.unknown().optional(),
+	headers: z.unknown().optional(),
 	method: z.string().min(1).optional(),
+	params: z.unknown().optional(),
 	path: z.string().min(1),
+	query: z.unknown().optional(),
+	searchParams: z.unknown().optional(),
 });
 
 export const GraphQLReplayRequestSchema = z.object({
@@ -39,6 +42,24 @@ export type CreateAppReplayRequest = {
 	};
 };
 
+const toGraphQLEndpoint = (request: Pick<GraphQLReplayRequest, "operationName" | "queryId">) =>
+	`/i/api/graphql/${encodeURIComponent(request.queryId)}/${encodeURIComponent(request.operationName)}`;
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+	value !== null && typeof value === "object" && !Array.isArray(value);
+
+const parseJsonValue = (value: unknown) => {
+	if (typeof value !== "string") {
+		return value;
+	}
+
+	try {
+		return JSON.parse(value);
+	} catch {
+		return value;
+	}
+};
+
 const parseJsonSearchParam = (value: string | null): unknown | undefined => {
 	if (!value) {
 		return undefined;
@@ -49,6 +70,58 @@ const parseJsonSearchParam = (value: string | null): unknown | undefined => {
 	} catch {
 		return undefined;
 	}
+};
+
+const valueByKey = (value: unknown, key: string, depth = 0, seen = new WeakSet<object>()): unknown => {
+	if (depth > 8 || value === null || value === undefined || typeof value !== "object") {
+		return undefined;
+	}
+	if (seen.has(value)) {
+		return undefined;
+	}
+	seen.add(value);
+
+	if (value instanceof URLSearchParams) {
+		return parseJsonSearchParam(value.get(key));
+	}
+
+	if (Array.isArray(value)) {
+		for (const item of value) {
+			if (Array.isArray(item) && item[0] === key) {
+				return parseJsonValue(item[1]);
+			}
+			const found = valueByKey(item, key, depth + 1, seen);
+			if (found !== undefined) {
+				return found;
+			}
+		}
+		return undefined;
+	}
+
+	if (Object.hasOwn(value, key)) {
+		return parseJsonValue((value as Record<string, unknown>)[key]);
+	}
+
+	for (const item of Object.values(value)) {
+		const found = valueByKey(item, key, depth + 1, seen);
+		if (found !== undefined) {
+			return found;
+		}
+	}
+
+	return undefined;
+};
+
+const recordFromValue = (value: unknown): Record<string, unknown> | undefined => {
+	const parsed = parseJsonValue(value);
+	if (isRecord(parsed)) {
+		return parsed;
+	}
+	if (Array.isArray(parsed)) {
+		const entries = parsed.filter((item): item is string => typeof item === "string").map((key) => [key, true]);
+		return entries.length > 0 ? Object.fromEntries(entries) : undefined;
+	}
+	return undefined;
 };
 
 const parseGraphQLPath = (path: string) => {
@@ -115,19 +188,38 @@ export const parseCapturedGraphQLRequest = (value: unknown): GraphQLReplayReques
 		return undefined;
 	}
 
-	const data = candidate.data;
+	const data = CapturedGraphQLDataSchema.safeParse(candidate.data);
+	const sources = [candidate.data, candidate.params, candidate.query, candidate.searchParams, value];
+	const valueFromSources = (key: string) => {
+		for (const source of sources) {
+			const found = valueByKey(source, key);
+			if (found !== undefined) {
+				return found;
+			}
+		}
+		return undefined;
+	};
+	const variables =
+		data.success && data.data.variables !== undefined
+			? data.data.variables
+			: (parseJsonSearchParam(pathInfo.searchParams.get("variables")) ?? valueFromSources("variables") ?? {});
+	const features =
+		(data.success ? data.data.features : undefined) ??
+		recordFromValue(parseJsonSearchParam(pathInfo.searchParams.get("features"))) ??
+		recordFromValue(valueFromSources("features")) ??
+		recordFromValue(valueFromSources("featureSwitches")) ??
+		{};
+	const fieldToggles =
+		(data.success ? data.data.fieldToggles : undefined) ??
+		recordFromValue(parseJsonSearchParam(pathInfo.searchParams.get("fieldToggles"))) ??
+		recordFromValue(valueFromSources("fieldToggles")) ??
+		{};
 	const request = GraphQLReplayRequestSchema.safeParse({
-		variables: data?.variables ?? parseJsonSearchParam(pathInfo.searchParams.get("variables")) ?? {},
-		features:
-			data?.features ??
-			parseJsonSearchParam(pathInfo.searchParams.get("features")) ??
-			{},
-		fieldToggles:
-			data?.fieldToggles ??
-			parseJsonSearchParam(pathInfo.searchParams.get("fieldToggles")) ??
-			{},
-		queryId: data?.queryId ?? pathInfo.queryId,
-		headers: candidate.headers ?? {},
+		variables,
+		features,
+		fieldToggles,
+		queryId: data.success ? (data.data.queryId ?? pathInfo.queryId) : pathInfo.queryId,
+		headers: recordFromValue(candidate.headers) ?? {},
 		method,
 		path: candidate.path,
 		operationName: pathInfo.operationName,
@@ -137,9 +229,7 @@ export const parseCapturedGraphQLRequest = (value: unknown): GraphQLReplayReques
 };
 
 export const toCreateAppReplayRequest = (request: GraphQLReplayRequest): CreateAppReplayRequest => {
-	const endpoint = `/i/api/graphql/${encodeURIComponent(request.queryId)}/${encodeURIComponent(
-		request.operationName,
-	)}`;
+	const endpoint = toGraphQLEndpoint(request);
 
 	if (request.method === "GET") {
 		const params = new URLSearchParams();
@@ -161,4 +251,48 @@ export const toCreateAppReplayRequest = (request: GraphQLReplayRequest): CreateA
 			fieldToggles: request.fieldToggles,
 		},
 	};
+};
+
+const jsLiteral = (value: unknown) => JSON.stringify(value, null, "\t") ?? "undefined";
+
+export const toDefaultExecutionScript = (request: GraphQLReplayRequest) => {
+	const replay = toCreateAppReplayRequest(request);
+	const variables = request.variables ?? {};
+	const features = request.features;
+	const fieldToggles = request.fieldToggles;
+	const endpoint = toGraphQLEndpoint(request);
+	const variableDeclarations = [
+		`const variables = ${jsLiteral(variables)};`,
+		`const features = ${jsLiteral(features)};`,
+		`const fieldToggles = ${jsLiteral(fieldToggles)};`,
+	];
+
+	if (!replay.body) {
+		return [
+			...variableDeclarations,
+			"",
+			`const url = new URL(${JSON.stringify(endpoint)}, window.location.origin);`,
+			'url.searchParams.set("variables", JSON.stringify(variables));',
+			'url.searchParams.set("features", JSON.stringify(features));',
+			'url.searchParams.set("fieldToggles", JSON.stringify(fieldToggles));',
+			"",
+			"return await fetch(url.toString(), {",
+			`\tmethod: ${JSON.stringify(replay.method)},`,
+			"});",
+		].join("\n");
+	}
+
+	return [
+		...variableDeclarations,
+		"",
+		`return await fetch(${JSON.stringify(endpoint)}, {`,
+		`\tmethod: ${JSON.stringify(replay.method)},`,
+		'\theaders: { "content-type": "application/json" },',
+		"\tbody: JSON.stringify({",
+		"\t\tvariables,",
+		"\t\tfeatures,",
+		"\t\tfieldToggles,",
+		"\t}),",
+		"});",
+	].join("\n");
 };

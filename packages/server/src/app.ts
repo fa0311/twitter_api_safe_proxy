@@ -27,7 +27,7 @@ const createApp = async (getClient: () => TwitterApiProfileClient) => {
 
 	app.post("/i/api/graphql/:queryId/:operationName", async (c) => {
 		const client = getClient();
-		const { variables, features } = await c.req.json();
+		const { variables, features = {}, fieldToggles = {} } = await c.req.json();
 
 		const result = await client.graphQLFullResponse(
 			{
@@ -36,7 +36,7 @@ const createApp = async (getClient: () => TwitterApiProfileClient) => {
 				operationType: "mutation",
 				metadata: {
 					featureSwitches: Object.keys(features),
-					fieldToggles: [],
+					fieldToggles: Object.keys(fieldToggles),
 				},
 			},
 			variables,

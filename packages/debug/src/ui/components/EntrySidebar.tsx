@@ -1,5 +1,5 @@
-import { countKeys, formatTime, labelOf, metaOf, methodBadgeClass } from "../entryUtils";
 import type { DebugEntry, MethodFilter, SortMode } from "../types";
+import { EntryList } from "./EntryList";
 
 type EntryStats = {
 	get: number;
@@ -13,11 +13,9 @@ type EntrySidebarProps = {
 	methodFilter: MethodFilter;
 	onClear: () => void;
 	onMethodFilterChange: (value: MethodFilter) => void;
-	onOnlyReplayableChange: (value: boolean) => void;
 	onQueryChange: (value: string) => void;
 	onSelect: (id: number) => void;
 	onSortModeChange: (value: SortMode) => void;
-	onlyReplayable: boolean;
 	query: string;
 	selectedId?: number;
 	sortMode: SortMode;
@@ -29,18 +27,16 @@ export function EntrySidebar({
 	methodFilter,
 	onClear,
 	onMethodFilterChange,
-	onOnlyReplayableChange,
 	onQueryChange,
 	onSelect,
 	onSortModeChange,
-	onlyReplayable,
 	query,
 	selectedId,
 	sortMode,
 	stats,
 }: EntrySidebarProps) {
 	return (
-		<section className="grid min-h-0 grid-rows-[auto_auto_1fr] border-[#d9e0ea] border-r bg-white max-[900px]:border-r-0 max-[900px]:border-b">
+		<section className="grid min-h-0 grid-rows-[auto_auto_minmax(0,1fr)] overflow-hidden border-[#d9e0ea] border-r bg-white max-[900px]:border-r-0 max-[900px]:border-b">
 			<div className="grid grid-cols-4 border-[#e7ebf1] border-b text-center text-xs">
 				<div className="px-3 py-2">
 					<div className="font-bold text-[15px]">{stats.total}</div>
@@ -75,6 +71,7 @@ export function EntrySidebar({
 						onChange={(event) => onMethodFilterChange(event.target.value as MethodFilter)}
 					>
 						<option value="all">All methods</option>
+						<option value="replayable">Replayable GraphQL</option>
 						<option value="GET">GET only</option>
 						<option value="POST">POST only</option>
 					</select>
@@ -96,63 +93,9 @@ export function EntrySidebar({
 						Clear
 					</button>
 				</div>
-				<label className="inline-flex items-center gap-2 text-[#536173] text-sm">
-					<input
-						checked={onlyReplayable}
-						className="h-4 w-4"
-						type="checkbox"
-						onChange={(event) => onOnlyReplayableChange(event.target.checked)}
-					/>
-					Replayable GraphQL only
-				</label>
 			</div>
 
-			<div className="min-h-0 overflow-auto">
-				{entries.length === 0 ? (
-					<div className="p-5 text-[#667386] text-sm">No matching entries</div>
-				) : (
-					entries.map((entry) => {
-						const method = entry.graphQL?.method ?? "RAW";
-						const selectedEntry = entry.id === selectedId;
-						return (
-							<button
-								className={`grid w-full cursor-pointer gap-2 border-0 border-[#edf0f4] border-b bg-transparent px-3.5 py-3 text-left hover:bg-[#f4f8ff] ${
-									selectedEntry ? "bg-[#edf5ff]" : ""
-								}`}
-								key={entry.id}
-								type="button"
-								onClick={() => onSelect(entry.id)}
-							>
-								<span className="flex min-w-0 items-center gap-2">
-									<span className={`rounded border px-2 py-0.5 font-bold text-[11px] ${methodBadgeClass(method)}`}>
-										{method}
-									</span>
-									<span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap font-semibold text-sm">
-										{String(labelOf(entry))}
-									</span>
-									<span className="ml-auto whitespace-nowrap font-mono text-[#667386] text-[11px]">
-										#{entry.id}
-									</span>
-								</span>
-								<span className="overflow-hidden text-ellipsis whitespace-nowrap text-[#667386] text-xs">
-									{metaOf(entry) || "No metadata"}
-								</span>
-								<span className="flex flex-wrap items-center gap-2 text-[#7a8697] text-[11px]">
-									<span>{formatTime(entry.receivedAt)}</span>
-									{entry.graphQL ? (
-										<>
-											<span>variables {countKeys(entry.graphQL.variables)}</span>
-											<span>features {countKeys(entry.graphQL.features)}</span>
-										</>
-									) : (
-										<span>not replayable</span>
-									)}
-								</span>
-							</button>
-						);
-					})
-				)}
-			</div>
+			<EntryList entries={entries} selectedId={selectedId} onSelect={onSelect} />
 		</section>
 	);
 }

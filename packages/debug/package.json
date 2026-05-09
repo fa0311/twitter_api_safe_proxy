@@ -21,6 +21,11 @@
 	"author": "",
 	"license": "MIT",
 	"dependencies": {
+		"@codemirror/lang-javascript": "^6.2.5",
+		"@codemirror/lang-json": "^6.0.2",
+		"@codemirror/language": "^6.12.3",
+		"@codemirror/state": "^6.6.0",
+		"codemirror": "^6.0.2",
 		"react": "^19.2.6",
 		"react-dom": "^19.2.6",
 		"zod": "^4.1.13"

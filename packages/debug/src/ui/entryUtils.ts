@@ -25,19 +25,19 @@ const findByKey = (value: unknown, key: string, depth = 0, seen = new WeakSet<ob
 
 export const labelOf = (entry: DebugEntry) =>
 	entry.graphQL?.operationName ??
-	findByKey(entry.raw, "operationName") ??
-	findByKey(entry.raw, "url") ??
-	findByKey(entry.raw, "property") ??
+	findByKey(entry.request, "operationName") ??
+	findByKey(entry.request, "url") ??
+	findByKey(entry.request, "property") ??
 	"entry";
 
 export const metaOf = (entry: DebugEntry) =>
 	entry.graphQL
 		? [entry.graphQL.queryId, entry.graphQL.path].filter(Boolean).join(" | ")
 		: [
-				findByKey(entry.raw, "property"),
-				findByKey(entry.raw, "operationType"),
-				findByKey(entry.raw, "method"),
-				findByKey(entry.raw, "queryId"),
+				findByKey(entry.request, "property"),
+				findByKey(entry.request, "operationType"),
+				findByKey(entry.request, "method"),
+				findByKey(entry.request, "queryId"),
 			]
 				.filter(Boolean)
 				.join(" | ");
@@ -63,7 +63,9 @@ export const searchTextOf = (entry: DebugEntry) =>
 		entry.graphQL?.operationName,
 		entry.graphQL?.queryId,
 		entry.graphQL?.path,
-		stringify(entry.raw),
+		stringify(entry.request),
+		stringify(entry.response),
+		stringify(entry.error),
 	]
 		.filter(Boolean)
 		.join("\n")

@@ -1,24 +1,26 @@
 import type { GraphQLReplayRequest } from "../shared/graphqlReplay";
 
 export type DebugEntry = {
+	error?: unknown;
 	graphQL?: GraphQLReplayRequest;
 	id: number;
 	raw: unknown;
+	request: unknown;
+	response?: unknown;
 	receivedAt: number;
 };
 
-export type MethodFilter = "all" | "GET" | "POST";
+export type MethodFilter = "all" | "replayable" | "GET" | "POST";
 export type SortMode = "newest" | "oldest" | "operation" | "method";
-export type DetailTab = "request" | "raw" | "response";
+export type DetailTab = "request" | "response" | "javascript";
 
-export type ReplayResult = {
+export type ExecutionResult = {
 	finishedAt: number;
-	payload: unknown;
-	status: number;
+	value: unknown;
 };
 
-export type ReplayState =
+export type ExecutionState =
 	| { status: "idle" }
 	| { status: "loading" }
-	| { status: "done"; result: ReplayResult }
+	| { status: "done"; result: ExecutionResult }
 	| { status: "error"; message: string };

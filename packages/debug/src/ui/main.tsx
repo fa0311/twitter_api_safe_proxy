@@ -1,21 +1,69 @@
 import { StrictMode, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { toCreateAppReplayRequest } from "../shared/graphqlReplay";
+import { toDefaultExecutionScript } from "../shared/graphqlReplay";
 import { DetailPane } from "./components/DetailPane";
 import { EntrySidebar } from "./components/EntrySidebar";
 import { labelOf, searchTextOf } from "./entryUtils";
 import "./style.css";
-import type { DetailTab, MethodFilter, ReplayState, SortMode } from "./types";
+import type { DebugEntry, DetailTab, ExecutionState, MethodFilter, SortMode } from "./types";
 import { useDebugEntries } from "./useDebugEntries";
+
+const stripTrailingSemicolons = (value: string) => value.trim().replace(/;+\s*$/, "");
+
+const createScriptRunner = (source: string) => {
+	const expression = stripTrailingSemicolons(source);
+
+	try {
+		return new Function(
+			"entry",
+			"graphQL",
+			"capturedResponse",
+			`"use strict";
+return (async () => (${expression}))();`,
+		) as (entry: DebugEntry, graphQL: DebugEntry["graphQL"], capturedResponse: unknown) => Promise<unknown>;
+	} catch {
+		return new Function(
+			"entry",
+			"graphQL",
+			"capturedResponse",
+			`"use strict";
+return (async () => {
+${source}
+})();`,
+		) as (entry: DebugEntry, graphQL: DebugEntry["graphQL"], capturedResponse: unknown) => Promise<unknown>;
+	}
+};
+
+const executionValueOf = async (value: unknown) => {
+	if (!(value instanceof Response)) {
+		return value;
+	}
+
+	try {
+		const response = value.clone();
+		const contentType = response.headers.get("content-type") ?? "";
+		return {
+			payload: contentType.includes("application/json")
+				? await response.json().catch(() => null)
+				: await response.text(),
+			status: response.status,
+		};
+	} catch (error) {
+		return {
+			error: error instanceof Error ? error.message : "Response body could not be read",
+			status: value.status,
+		};
+	}
+};
 
 function App() {
 	const { clearEntries, connected, entries, selectedId, setSelectedId } = useDebugEntries();
 	const [methodFilter, setMethodFilter] = useState<MethodFilter>("all");
-	const [onlyReplayable, setOnlyReplayable] = useState(false);
 	const [query, setQuery] = useState("");
 	const [sortMode, setSortMode] = useState<SortMode>("newest");
 	const [tab, setTab] = useState<DetailTab>("request");
-	const [replayById, setReplayById] = useState<Record<number, ReplayState>>({});
+	const [executionById, setExecutionById] = useState<Record<number, ExecutionState>>({});
+	const [scriptById, setScriptById] = useState<Record<number, string>>({});
 
 	const stats = useMemo(
 		() => ({
@@ -30,10 +78,10 @@ function App() {
 	const visibleEntries = useMemo(() => {
 		const normalizedQuery = query.trim().toLowerCase();
 		const filtered = entries.filter((entry) => {
-			if (onlyReplayable && !entry.graphQL) {
+			if (methodFilter === "replayable" && !entry.graphQL) {
 				return false;
 			}
-			if (methodFilter !== "all" && entry.graphQL?.method !== methodFilter) {
+			if ((methodFilter === "GET" || methodFilter === "POST") && entry.graphQL?.method !== methodFilter) {
 				return false;
 			}
 			if (normalizedQuery && !searchTextOf(entry).includes(normalizedQuery)) {
@@ -54,49 +102,56 @@ function App() {
 			}
 			return right.receivedAt - left.receivedAt;
 		});
-	}, [entries, methodFilter, onlyReplayable, query, sortMode]);
+	}, [entries, methodFilter, query, sortMode]);
 
 	const selected = entries.find((entry) => entry.id === selectedId);
-	const selectedReplayState = selected ? replayById[selected.id] ?? { status: "idle" as const } : undefined;
+	const selectedExecutionState = selected ? (executionById[selected.id] ?? { status: "idle" as const }) : undefined;
+	const selectedScript = useMemo(() => {
+		if (!selected?.graphQL) {
+			return "";
+		}
+		return scriptById[selected.id] ?? toDefaultExecutionScript(selected.graphQL);
+	}, [scriptById, selected]);
 
 	const clearAll = () => {
 		clearEntries();
-		setReplayById({});
+		setExecutionById({});
+		setScriptById({});
 	};
 
-	const replaySelected = async () => {
+	const setSelectedScript = (script: string) => {
+		if (!selected) {
+			return;
+		}
+		setScriptById((current) => ({ ...current, [selected.id]: script }));
+	};
+
+	const executeSelectedScript = async () => {
 		if (!selected?.graphQL) {
 			return;
 		}
 
-		setReplayById((current) => ({ ...current, [selected.id]: { status: "loading" } }));
+		setExecutionById((current) => ({ ...current, [selected.id]: { status: "loading" } }));
 		setTab("response");
 
-		const replay = toCreateAppReplayRequest(selected.graphQL);
-
 		try {
-			const response = await fetch(replay.path, {
-				method: replay.method,
-				headers: replay.body ? { "content-type": "application/json" } : undefined,
-				body: replay.body ? JSON.stringify(replay.body) : undefined,
-			});
-			const payload = await response.json().catch(() => null);
-			setReplayById((current) => ({
+			const run = createScriptRunner(selectedScript);
+			const value = await executionValueOf(await run(selected, selected.graphQL, selected.response));
+			setExecutionById((current) => ({
 				...current,
 				[selected.id]: {
 					result: {
 						finishedAt: Date.now(),
-						payload,
-						status: response.status,
+						value,
 					},
 					status: "done",
 				},
 			}));
 		} catch (error) {
-			setReplayById((current) => ({
+			setExecutionById((current) => ({
 				...current,
 				[selected.id]: {
-					message: error instanceof Error ? error.message : "Replay failed",
+					message: error instanceof Error ? error.message : "Execution failed",
 					status: "error",
 				},
 			}));
@@ -104,12 +159,12 @@ function App() {
 	};
 
 	return (
-		<div className="grid min-h-screen grid-rows-[auto_1fr] bg-[#f5f7fa] font-sans text-[#17202c]">
+		<div className="grid h-dvh grid-rows-[auto_minmax(0,1fr)] overflow-hidden bg-[#f5f7fa] font-sans text-[#17202c]">
 			<header className="border-[#d9e0ea] border-b bg-white px-5 py-3">
 				<div className="flex flex-wrap items-center gap-3">
 					<div className="mr-auto">
 						<div className="font-bold text-[15px]">Twitter API Debug</div>
-						<div className="text-[#667386] text-xs">Captured createApp traffic and GraphQL replay</div>
+						<div className="text-[#667386] text-xs">Captured createApp traffic and GraphQL execution</div>
 					</div>
 					<div className="inline-flex items-center gap-2 rounded border border-[#d9e0ea] px-2.5 py-1 text-[#586577] text-xs">
 						<span className={`h-2 w-2 rounded-full ${connected ? "bg-[#168a55]" : "bg-[#b3261e]"}`} />
@@ -118,27 +173,27 @@ function App() {
 				</div>
 			</header>
 
-			<main className="grid min-h-0 grid-cols-[minmax(360px,44%)_minmax(0,1fr)] max-[900px]:grid-cols-1 max-[900px]:grid-rows-[minmax(420px,48vh)_1fr]">
+			<main className="grid min-h-0 grid-cols-[minmax(320px,420px)_minmax(0,1fr)] overflow-hidden max-[900px]:grid-cols-1 max-[900px]:grid-rows-[minmax(280px,42dvh)_minmax(0,1fr)]">
 				<EntrySidebar
 					entries={visibleEntries}
 					methodFilter={methodFilter}
-					onlyReplayable={onlyReplayable}
 					query={query}
 					selectedId={selectedId}
 					sortMode={sortMode}
 					stats={stats}
 					onClear={clearAll}
 					onMethodFilterChange={setMethodFilter}
-					onOnlyReplayableChange={setOnlyReplayable}
 					onQueryChange={setQuery}
 					onSelect={setSelectedId}
 					onSortModeChange={setSortMode}
 				/>
 				<DetailPane
-					replayState={selectedReplayState}
+					executionState={selectedExecutionState}
+					script={selectedScript}
 					selected={selected}
 					tab={tab}
-					onReplay={replaySelected}
+					onExecute={executeSelectedScript}
+					onScriptChange={setSelectedScript}
 					onTabChange={setTab}
 				/>
 			</main>
