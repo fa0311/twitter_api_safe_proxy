@@ -9,7 +9,7 @@ describe("someFunction", () => {
 
 	afterEach(async () => integration.afterEachCall());
 
-	it("runs graphQLFullResponse through a persistent X profile", async () => {
+	const createMockApp = async () => {
 		const browser = await createBrowser({
 			browserType: "chromium",
 			userDataDir: await integration.temp(),
@@ -29,7 +29,11 @@ describe("someFunction", () => {
 			await browser.close();
 			await page.close();
 		});
+		return app;
+	};
 
+	it("graphQL GET", async () => {
+		const app = await createMockApp();
 		const params = new URLSearchParams({
 			variables: JSON.stringify({
 				tweetId: "1349129669258448897",

@@ -88,8 +88,6 @@ const legacyPostSchema = z.looseObject({
 	data: z.unknown(),
 });
 
-
-
 const labelFromPath = (path: string): string => {
 	const last = new URL(path, "https://x.com").pathname.split("/").filter(Boolean).at(-1) ?? path;
 	return last.replace(/\.json$/, "");
@@ -125,12 +123,12 @@ export const buildEntry = (raw: unknown, id: number): DebugEntry => {
 	const probe = probeSchema.parse(event.request);
 	const pathname = new URL(probe.path, "https://x.com").pathname;
 
-	const buildSearchText = (parts: unknown[]): string =>	parts
-		.map((p) => (typeof p === "string" || typeof p === "number" ? String(p) : JSON.stringify(p)))
-		.filter(Boolean)
-		.join("\n")
-		.toLowerCase();
-
+	const buildSearchText = (parts: unknown[]): string =>
+		parts
+			.map((p) => (typeof p === "string" || typeof p === "number" ? String(p) : JSON.stringify(p)))
+			.filter(Boolean)
+			.join("\n")
+			.toLowerCase();
 
 	const core = {
 		id,
@@ -182,17 +180,15 @@ export const statsOf = (entries: DebugEntry[]): EntryStats =>
 		{ total: 0, v11: 0, v2: 0, graphql: 0 },
 	);
 
-
-
 const graphqlReplayPath = (queryId: string, operationName: string) =>
 	`/i/api/graphql/${encodeURIComponent(queryId)}/${encodeURIComponent(operationName)}`;
 
 export const defaultScriptOf = (entry: DebugEntry): string => {
 	if (entry.version === "graphql") {
 		const endpoint = graphqlReplayPath(entry.queryId, entry.operationName);
-		const variables = JSON.stringify(entry.variables, null, 2);
-		const features = JSON.stringify(entry.features, null, 2);
-		const fieldToggles = JSON.stringify(entry.fieldToggles, null, 2);
+		const variables = JSON.stringify(entry.variables, null, "\t");
+		const features = JSON.stringify(entry.features, null, "\t");
+		const fieldToggles = JSON.stringify(entry.fieldToggles, null, "\t");
 		if (entry.method === "GET") {
 			return [
 				`const params = new URLSearchParams();`,
@@ -201,6 +197,7 @@ export const defaultScriptOf = (entry: DebugEntry): string => {
 				`params.set("fieldToggles", JSON.stringify(${fieldToggles}));`,
 				"",
 				`return await fetch(\`${endpoint}?\${params}\`, {`,
+				'\tmethod: "GET",',
 				"});",
 			].join("\n");
 		}
@@ -211,9 +208,8 @@ export const defaultScriptOf = (entry: DebugEntry): string => {
 			`\tfieldToggles: ${fieldToggles},`,
 			`};`,
 			"",
-			`return await fetch(${JSON.stringify(endpoint)}, {`,
+			`return await fetch("${endpoint}", {`,
 			'\tmethod: "POST",',
-			'\theaders: { "content-type": "application/json" },',
 			"\tbody: JSON.stringify(body),",
 			"});",
 		].join("\n");
@@ -222,20 +218,19 @@ export const defaultScriptOf = (entry: DebugEntry): string => {
 	if (entry.method === "GET") {
 		const cfg = legacyGetSchema.parse(entry.request);
 		return [
-			`const params = new URLSearchParams(${JSON.stringify(cfg.params, null, 2)});`,
+			`const params = new URLSearchParams(${JSON.stringify(cfg.params, null, "\t")});`,
 			"",
 			`return await fetch(\`${cfg.path}?\${params}\`, {`,
-			`\theaders: ${JSON.stringify(cfg.headers, null, 2)},`,
+			'\tmethod: "GET",',
 			"});",
 		].join("\n");
 	}
 	const cfg = legacyPostSchema.parse(entry.request);
 	return [
-		`const data = ${JSON.stringify(cfg.data, null, 2)};`,
+		`const data = ${JSON.stringify(cfg.data, null, "\t")};`,
 		"",
 		`return await fetch(${JSON.stringify(cfg.path)}, {`,
 		'\tmethod: "POST",',
-		`\theaders: ${JSON.stringify(cfg.headers, null, 2)},`,
 		"\tbody: JSON.stringify(data),",
 		"});",
 	].join("\n");
@@ -243,7 +238,6 @@ export const defaultScriptOf = (entry: DebugEntry): string => {
 
 export const formatTime = (value: number): string =>
 	new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit", second: "2-digit" }).format(value);
-
 
 export const methodBadgeClass = (method: EntryMethod): string =>
 	method === "GET" ? "border-[#8fc7f2] bg-[#e8f4ff] text-[#075985]" : "border-[#c6b6ff] bg-[#f1edff] text-[#5b21b6]";

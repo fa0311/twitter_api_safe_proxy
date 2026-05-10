@@ -11,10 +11,19 @@ export type GraphQLRequest = {
 		fieldToggles: string[];
 	};
 };
+export type GraphQLOptions = {
+	fieldToggles: Record<string, unknown>;
+};
 
 export type TwitterApiProfileClient = {
-	graphQL: (param: GraphQLRequest, body: unknown) => Promise<unknown>;
-	graphQLFullResponse: (param: GraphQLRequest, body: unknown) => Promise<unknown>;
+	graphQL: (param: GraphQLRequest, body: unknown, data: unknown, options: GraphQLOptions) => Promise<unknown>;
+	graphQLFullResponse: (
+		param: GraphQLRequest,
+		body: unknown,
+		data: unknown,
+		options: GraphQLOptions,
+	) => Promise<unknown>;
+	dispatch: (request: unknown) => Promise<unknown>;
 	debugStream: ReadableStream<unknown>;
 	enableDebug: () => Promise<void>;
 	waitStartup: () => Promise<void>;
@@ -45,21 +54,28 @@ export const injectTwitterClient = async (page: Page): Promise<TwitterApiProfile
 	};
 	await page.addInitScript(injectSetupScript);
 
-	const graphQL = async (param: GraphQLRequest, body: unknown) => {
+	const graphQL = async (param: GraphQLRequest, body: unknown, data: unknown, options: GraphQLOptions) => {
 		return await page.evaluate((request) => globalThis.elonmusk_114514_request(request), {
 			property: "graphQL",
-			query: [param, body],
+			query: [param, body, data, options],
 		});
 	};
 
-	const graphQLFullResponse = async (param: GraphQLRequest, body: unknown) => {
+	const graphQLFullResponse = async (param: GraphQLRequest, body: unknown, data: unknown, options: GraphQLOptions) => {
 		return await page.evaluate((request) => globalThis.elonmusk_114514_request(request), {
 			property: "graphQLFullResponse",
-			query: [param, body],
+			query: [param, body, data, options],
+		});
+	};
+
+	const dispatch = async (query: unknown) => {
+		return await page.evaluate((request) => globalThis.elonmusk_114514_request(request), {
+			property: "dispatch",
+			query: [query],
 		});
 	};
 
 	const waitStartup = async () => await page.evaluate(() => globalThis.elonmusk_114514_wait_startup.promise);
 
-	return { graphQL, graphQLFullResponse, page, waitStartup, debugStream, enableDebug };
+	return { graphQL, graphQLFullResponse, dispatch, page, waitStartup, debugStream, enableDebug };
 };

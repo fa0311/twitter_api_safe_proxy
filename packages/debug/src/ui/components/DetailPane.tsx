@@ -3,7 +3,7 @@ import { type DebugEntry, defaultScriptOf } from "../entryUtils";
 import { useDebugEntriesStore, useEntrySelectionStore } from "../store";
 import { CodeEditor } from "./CodeEditor";
 import { DetailHeader } from "./DetailHeader";
-import { detailTabs, labelOf, type DetailTab } from "./detailPaneModel";
+import { type DetailTab, detailTabs, labelOf } from "./detailPaneModel";
 
 export const DetailPane = () => {
 	const selectedEntryId = useEntrySelectionStore((s) => s.selectedEntryId);
@@ -12,19 +12,17 @@ export const DetailPane = () => {
 
 	if (!selected) {
 		const message = entries.length > 0 ? "Select an entry from the list." : "Waiting for captured requests.";
-		return <EmptyDetailPane message={message} />;
+		return (
+			<section>
+				<div className="border-[#d9e0ea] border-b bg-white px-4 py-3">
+					<div className="text-[#667386] text-sm">{message}</div>
+				</div>
+			</section>
+		);
 	}
 
 	return <SelectedDetailPane entry={selected} key={selected.id} />;
 };
-
-const EmptyDetailPane = ({ message }: { message: string }) => (
-	<section>
-		<div className="border-[#d9e0ea] border-b bg-white px-4 py-3">
-			<div className="text-[#667386] text-sm">{message}</div>
-		</div>
-	</section>
-);
 
 const SelectedDetailPane = ({ entry }: { entry: DebugEntry }) => {
 	const [tab, setTab] = useState<DetailTab>("request");
@@ -49,7 +47,6 @@ const SelectedDetailPane = ({ entry }: { entry: DebugEntry }) => {
 		}
 	})();
 
-
 	return (
 		<section className="grid min-h-0 min-w-0 grid-rows-[auto_minmax(0,1fr)]">
 			<DetailHeader entry={entry} />
@@ -60,10 +57,11 @@ const SelectedDetailPane = ({ entry }: { entry: DebugEntry }) => {
 						<div className="flex min-w-0 flex-wrap items-center gap-2">
 							{detailTabs.map((nextTab) => (
 								<button
-									className={`h-8 rounded border px-3 text-sm ${tab === nextTab
-										? "border-[#2563eb] bg-[#eff6ff] text-[#1d4ed8]"
-										: "border-[#cfd7e3] bg-white text-[#536173] hover:bg-[#f3f6fa]"
-										}`}
+									className={`h-8 rounded border px-3 text-sm ${
+										tab === nextTab
+											? "border-[#2563eb] bg-[#eff6ff] text-[#1d4ed8]"
+											: "border-[#cfd7e3] bg-white text-[#536173] hover:bg-[#f3f6fa]"
+									}`}
 									key={nextTab}
 									type="button"
 									onClick={() => setTab(nextTab)}
@@ -85,16 +83,15 @@ const SelectedDetailPane = ({ entry }: { entry: DebugEntry }) => {
 	);
 };
 
-
-type CopyStatus = "idle" | "copied" | "failed";
-
-const copyLabelOf = (status: CopyStatus) => {
-	if (status === "copied") return "Copied";
-	if (status === "failed") return "Failed";
-	return "Copy";
-};
-
 const CopyButton = ({ text }: { text: string | undefined }) => {
+	type CopyStatus = "idle" | "copied" | "failed";
+
+	const copyLabelOf = (status: CopyStatus) => {
+		if (status === "copied") return "Copied";
+		if (status === "failed") return "Failed";
+		return "Copy";
+	};
+
 	const [status, setStatus] = useState<CopyStatus>("idle");
 
 	const copy = async () => {
@@ -126,11 +123,11 @@ const CopyButton = ({ text }: { text: string | undefined }) => {
 	);
 };
 
-const compileScript = (source: string) =>
-	new Function(`"use strict";\nreturn (async () => {\n${source}\n})();`) as () => Promise<unknown>;
-
 const ExecuteButton = ({ script }: { script: string }) => {
 	const [running, setRunning] = useState(false);
+
+	const compileScript = (source: string) =>
+		new Function(`"use strict";\nreturn (async () => {\n${source}\n})();`) as () => Promise<unknown>;
 
 	const execute = async () => {
 		if (running) {

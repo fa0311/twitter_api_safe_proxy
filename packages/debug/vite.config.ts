@@ -20,6 +20,14 @@ export default defineConfig({
 				changeOrigin: true,
 				target: apiTarget,
 			},
+			"/1.1": {
+				changeOrigin: true,
+				target: apiTarget,
+			},
+			"/2": {
+				changeOrigin: true,
+				target: apiTarget,
+			},
 		},
 	},
 	build: {
