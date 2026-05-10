@@ -1,5 +1,41 @@
 import { z } from "zod";
-import type { DebugEntry, EntryFilters, EntryMethod, EntryStats, SortMode } from "./types";
+
+export type EntryMethod = "GET" | "POST";
+
+type EntryCore = {
+	id: number;
+	request: unknown;
+	response: unknown;
+	requestAt: number;
+	receivedAt: number;
+	path: string;
+	method: EntryMethod;
+	label: string;
+	searchText: string;
+};
+
+export type DebugEntry = EntryCore &
+	(
+		| { version: "v1.1" | "v2" }
+		| {
+				version: "graphql";
+				queryId: string;
+				operationName: string;
+				variables: unknown;
+				features: Record<string, unknown>;
+				fieldToggles: Record<string, unknown>;
+		  }
+	);
+
+export type MethodFilter = "all" | "GET" | "POST";
+export type VersionFilter = "all" | "v1.1" | "v2" | "graphql";
+
+export type EntryStats = {
+	total: number;
+	v11: number;
+	v2: number;
+	graphql: number;
+};
 
 const v11Pattern = new URLPattern({ pathname: "/1.1/*" });
 const v2Pattern = new URLPattern({ pathname: "/2/*" });
@@ -52,14 +88,7 @@ const legacyPostSchema = z.looseObject({
 	data: z.unknown(),
 });
 
-const stringifyJson = (value: unknown) => JSON.stringify(value, null, 2);
 
-const buildSearchText = (parts: unknown[]): string =>
-	parts
-		.map((p) => (typeof p === "string" || typeof p === "number" ? String(p) : stringifyJson(p)))
-		.filter(Boolean)
-		.join("\n")
-		.toLowerCase();
 
 const labelFromPath = (path: string): string => {
 	const last = new URL(path, "https://x.com").pathname.split("/").filter(Boolean).at(-1) ?? path;
@@ -95,6 +124,13 @@ export const buildEntry = (raw: unknown, id: number): DebugEntry => {
 	const event = eventSchema.parse(raw);
 	const probe = probeSchema.parse(event.request);
 	const pathname = new URL(probe.path, "https://x.com").pathname;
+
+	const buildSearchText = (parts: unknown[]): string =>	parts
+		.map((p) => (typeof p === "string" || typeof p === "number" ? String(p) : JSON.stringify(p)))
+		.filter(Boolean)
+		.join("\n")
+		.toLowerCase();
+
 
 	const core = {
 		id,
@@ -146,23 +182,7 @@ export const statsOf = (entries: DebugEntry[]): EntryStats =>
 		{ total: 0, v11: 0, v2: 0, graphql: 0 },
 	);
 
-const compareBy: Record<SortMode, (a: DebugEntry, b: DebugEntry) => number> = {
-	newest: (a, b) => b.receivedAt - a.receivedAt,
-	oldest: (a, b) => a.receivedAt - b.receivedAt,
-	label: (a, b) => a.label.localeCompare(b.label),
-	method: (a, b) => a.method.localeCompare(b.method),
-};
 
-export const filterAndSort = (entries: DebugEntry[], filters: EntryFilters): DebugEntry[] => {
-	const query = filters.query.toLowerCase();
-	const filtered = entries.filter((entry) => {
-		if (filters.method !== "all" && entry.method !== filters.method) return false;
-		if (filters.version !== "all" && entry.version !== filters.version) return false;
-		if (query && !entry.searchText.includes(query)) return false;
-		return true;
-	});
-	return filtered.toSorted(compareBy[filters.sort]);
-};
 
 const graphqlReplayPath = (queryId: string, operationName: string) =>
 	`/i/api/graphql/${encodeURIComponent(queryId)}/${encodeURIComponent(operationName)}`;
@@ -170,9 +190,9 @@ const graphqlReplayPath = (queryId: string, operationName: string) =>
 export const defaultScriptOf = (entry: DebugEntry): string => {
 	if (entry.version === "graphql") {
 		const endpoint = graphqlReplayPath(entry.queryId, entry.operationName);
-		const variables = stringifyJson(entry.variables ?? {});
-		const features = stringifyJson(entry.features);
-		const fieldToggles = stringifyJson(entry.fieldToggles);
+		const variables = JSON.stringify(entry.variables, null, 2);
+		const features = JSON.stringify(entry.features, null, 2);
+		const fieldToggles = JSON.stringify(entry.fieldToggles, null, 2);
 		if (entry.method === "GET") {
 			return [
 				`const params = new URLSearchParams();`,
@@ -202,20 +222,20 @@ export const defaultScriptOf = (entry: DebugEntry): string => {
 	if (entry.method === "GET") {
 		const cfg = legacyGetSchema.parse(entry.request);
 		return [
-			`const params = new URLSearchParams(${stringifyJson(cfg.params)});`,
+			`const params = new URLSearchParams(${JSON.stringify(cfg.params, null, 2)});`,
 			"",
 			`return await fetch(\`${cfg.path}?\${params}\`, {`,
-			`\theaders: ${stringifyJson(cfg.headers)},`,
+			`\theaders: ${JSON.stringify(cfg.headers, null, 2)},`,
 			"});",
 		].join("\n");
 	}
 	const cfg = legacyPostSchema.parse(entry.request);
 	return [
-		`const data = ${stringifyJson(cfg.data)};`,
+		`const data = ${JSON.stringify(cfg.data, null, 2)};`,
 		"",
 		`return await fetch(${JSON.stringify(cfg.path)}, {`,
 		'\tmethod: "POST",',
-		`\theaders: ${stringifyJson(cfg.headers)},`,
+		`\theaders: ${JSON.stringify(cfg.headers, null, 2)},`,
 		"\tbody: JSON.stringify(data),",
 		"});",
 	].join("\n");
@@ -224,7 +244,6 @@ export const defaultScriptOf = (entry: DebugEntry): string => {
 export const formatTime = (value: number): string =>
 	new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit", second: "2-digit" }).format(value);
 
-export const stringify = stringifyJson;
 
 export const methodBadgeClass = (method: EntryMethod): string =>
 	method === "GET" ? "border-[#8fc7f2] bg-[#e8f4ff] text-[#075985]" : "border-[#c6b6ff] bg-[#f1edff] text-[#5b21b6]";

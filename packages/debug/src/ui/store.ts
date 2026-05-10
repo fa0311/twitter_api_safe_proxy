@@ -1,6 +1,5 @@
 import { create } from "zustand";
-import { buildEntry } from "./entryUtils";
-import type { DebugEntry } from "./types";
+import { buildEntry, type DebugEntry } from "./entryUtils";
 
 type State = {
 	connected: boolean;

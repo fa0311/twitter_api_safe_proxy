@@ -1,5 +1,6 @@
+import type { MethodFilter, VersionFilter } from "../entryUtils";
 import { useDebugEntriesStore, useEntrySelectionStore } from "../store";
-import type { EntryFilters, MethodFilter, SortMode, VersionFilter } from "../types";
+import type { EntryFilters, SortMode } from "../useEntryFilters";
 
 const methodOptions: { value: MethodFilter; label: string }[] = [
 	{ label: "All methods", value: "all" },
@@ -41,7 +42,7 @@ export const EntryToolbar = ({ filters, onFiltersChange }: Props) => {
 		<div className="space-y-3 border-[#e7ebf1] border-b p-3">
 			<input
 				aria-label="Search entries"
-				className="h-9 w-full rounded border border-[#cfd7e3] bg-white px-3 text-sm outline-none focus:border-[#2563eb] focus:ring-2 focus:ring-[#dbeafe]"
+				className="h-9 w-full rounded border border-[#cfd7e3] px-3 text-sm outline-none focus:border-[#2563eb] focus:ring-2 focus:ring-[#dbeafe]"
 				placeholder="Search path, method, version, payload"
 				type="search"
 				value={filters.query}
@@ -50,7 +51,7 @@ export const EntryToolbar = ({ filters, onFiltersChange }: Props) => {
 			<div className="grid grid-cols-3 gap-2 max-[520px]:grid-cols-1">
 				<select
 					aria-label="Version filter"
-					className="h-9 rounded border border-[#cfd7e3] bg-white px-2 text-sm outline-none focus:border-[#2563eb]"
+					className="h-9 rounded border border-[#cfd7e3] px-2 text-sm outline-none focus:border-[#2563eb]"
 					value={filters.version}
 					onChange={(event) => update("version", event.target.value as VersionFilter)}
 				>
@@ -62,7 +63,7 @@ export const EntryToolbar = ({ filters, onFiltersChange }: Props) => {
 				</select>
 				<select
 					aria-label="Method filter"
-					className="h-9 rounded border border-[#cfd7e3] bg-white px-2 text-sm outline-none focus:border-[#2563eb]"
+					className="h-9 rounded border border-[#cfd7e3] px-2 text-sm outline-none focus:border-[#2563eb]"
 					value={filters.method}
 					onChange={(event) => update("method", event.target.value as MethodFilter)}
 				>
@@ -74,7 +75,7 @@ export const EntryToolbar = ({ filters, onFiltersChange }: Props) => {
 				</select>
 				<select
 					aria-label="Entry sort"
-					className="h-9 rounded border border-[#cfd7e3] bg-white px-2 text-sm outline-none focus:border-[#2563eb]"
+					className="h-9 rounded border border-[#cfd7e3] px-2 text-sm outline-none focus:border-[#2563eb]"
 					value={filters.sort}
 					onChange={(event) => update("sort", event.target.value as SortMode)}
 				>
@@ -86,7 +87,7 @@ export const EntryToolbar = ({ filters, onFiltersChange }: Props) => {
 				</select>
 			</div>
 			<button
-				className="h-9 w-full rounded border border-[#cfd7e3] bg-white px-3 text-sm hover:bg-[#f3f6fa]"
+				className="h-9 w-full rounded border border-[#cfd7e3] px-3 text-sm hover:bg-[#f3f6fa]"
 				type="button"
 				onClick={clearAll}
 			>

@@ -1,6 +1,5 @@
-import { formatTime } from "../entryUtils";
+import { type DebugEntry, formatTime } from "../entryUtils";
 import { useEntrySelectionStore } from "../store";
-import type { DebugEntry } from "../types";
 import { MethodBadge } from "./MethodBadge";
 
 type Props = {
@@ -11,14 +10,14 @@ type Props = {
 export const EntryList = ({ entries, newEntryIds }: Props) => {
 	if (entries.length === 0) {
 		return (
-			<div className="min-h-0 overflow-y-auto overscroll-contain">
+			<div className="overflow-y-auto overscroll-contain">
 				<div className="p-5 text-[#667386] text-sm">No matching entries</div>
 			</div>
 		);
 	}
 
 	return (
-		<div className="min-h-0 overflow-y-auto overscroll-contain">
+		<div className="overflow-y-auto overscroll-contain">
 			{entries.map((entry) => (
 				<EntryRow entry={entry} key={entry.id} newlyAdded={newEntryIds.has(entry.id)} />
 			))}
@@ -38,7 +37,7 @@ const EntryRow = ({ entry, newlyAdded }: EntryRowProps) => {
 	return (
 		<button
 			aria-current={selected ? "true" : undefined}
-			className={`grid w-full cursor-pointer gap-2 border-0 border-[#edf0f4] border-b bg-transparent px-3.5 py-3 text-left hover:bg-[#f4f8ff] ${selected ? "bg-[#edf5ff]" : ""} ${newlyAdded ? "entry-row-new" : ""}`}
+			className={`grid w-full cursor-pointer gap-2 border-0 border-[#edf0f4] border-b px-3.5 py-3 text-left hover:bg-[#f4f8ff] ${selected ? "bg-[#edf5ff]" : ""} ${newlyAdded ? "entry-row-new" : ""}`}
 			type="button"
 			onClick={() => selectEntry(entry.id)}
 		>

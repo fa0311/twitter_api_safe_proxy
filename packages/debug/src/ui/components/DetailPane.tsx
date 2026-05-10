@@ -1,105 +1,161 @@
 import { useState } from "react";
-import { defaultScriptOf, stringify } from "../entryUtils";
+import { type DebugEntry, defaultScriptOf } from "../entryUtils";
 import { useDebugEntriesStore, useEntrySelectionStore } from "../store";
-import type { DebugEntry, DetailTab } from "../types";
 import { CodeEditor } from "./CodeEditor";
-import { MethodBadge } from "./MethodBadge";
-import { ScriptEditor } from "./ScriptEditor";
-
-const detailTabLabel: Record<DetailTab, string> = {
-	javascript: "JavaScript",
-	request: "Request",
-	response: "Response",
-};
-
-const detailPayloadOf = (selected: DebugEntry, tab: DetailTab): unknown => {
-	if (tab === "request") return selected.request;
-	if (tab === "javascript") return undefined;
-	return selected.response;
-};
-
-const allTabs: DetailTab[] = ["request", "response", "javascript"];
+import { DetailHeader } from "./DetailHeader";
+import { detailTabs, labelOf, type DetailTab } from "./detailPaneModel";
 
 export const DetailPane = () => {
 	const selectedEntryId = useEntrySelectionStore((s) => s.selectedEntryId);
 	const entries = useDebugEntriesStore((s) => s.entries);
-	const [tab, setTab] = useState<DetailTab>("request");
-	const [scripts, setScripts] = useState<Record<number, string>>({});
-
-	const selected = entries.find((e) => e.id === selectedEntryId);
-	const hasEntries = entries.length > 0;
+	const selected = entries.find((entry) => entry.id === selectedEntryId);
 
 	if (!selected) {
-		const message = hasEntries ? "Select an entry from the list." : "Waiting for captured requests.";
-		return (
-			<section className="grid min-h-0 grid-rows-[auto_minmax(0,1fr)] overflow-hidden">
-				<div className="border-[#d9e0ea] border-b bg-white px-4 py-3">
-					<div className="text-[#667386] text-sm">{message}</div>
-				</div>
-			</section>
-		);
+		const message = entries.length > 0 ? "Select an entry from the list." : "Waiting for captured requests.";
+		return <EmptyDetailPane message={message} />;
 	}
 
-	const detailPayload = detailPayloadOf(selected, tab);
-	const detailText = detailPayload === undefined ? undefined : stringify(detailPayload);
+	return <SelectedDetailPane entry={selected} key={selected.id} />;
+};
 
-	const script = scripts[selected.id] ?? defaultScriptOf(selected);
-	const onScriptChange = (next: string) => setScripts((prev) => ({ ...prev, [selected.id]: next }));
+const EmptyDetailPane = ({ message }: { message: string }) => (
+	<section>
+		<div className="border-[#d9e0ea] border-b bg-white px-4 py-3">
+			<div className="text-[#667386] text-sm">{message}</div>
+		</div>
+	</section>
+);
+
+const SelectedDetailPane = ({ entry }: { entry: DebugEntry }) => {
+	const [tab, setTab] = useState<DetailTab>("request");
+	const [script, onScriptChange] = useState(() => defaultScriptOf(entry));
+
+	const text = (() => {
+		if (tab === "response") {
+			return JSON.stringify(entry.response, null, 2);
+		} else if (tab === "request") {
+			return JSON.stringify(entry.request, null, 2);
+		} else if (tab === "javascript") {
+			return script;
+		}
+		throw new Error(`Unreachable`);
+	})();
+
+	const body = (() => {
+		if (tab === "javascript") {
+			return <CodeEditor language="javascript" readOnly={false} value={text} onChange={onScriptChange} />;
+		} else {
+			return <CodeEditor language="json" readOnly={true} value={text} />;
+		}
+	})();
+
 
 	return (
-		<section className="grid min-h-0 grid-rows-[auto_minmax(0,1fr)] overflow-hidden">
-			<div className="border-[#d9e0ea] border-b bg-white px-4 py-3">
-				<div className="flex min-w-0 flex-wrap items-center gap-3">
-					<div className="min-w-0">
-						<div className="flex min-w-0 items-center gap-2">
-							<MethodBadge method={selected.method} />
-							<span className="rounded border border-[#d7dce4] bg-[#f3f5f8] px-1.5 py-0.5 font-bold text-[#536173] text-[11px]">
-								{selected.version}
-							</span>
-							<div className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap font-bold">{selected.label}</div>
-						</div>
-						<div className="mt-1 overflow-hidden text-ellipsis whitespace-nowrap text-[#667386] text-xs">
-							{selected.path}
-						</div>
-					</div>
-				</div>
-			</div>
+		<section className="grid min-h-0 min-w-0 grid-rows-[auto_minmax(0,1fr)]">
+			<DetailHeader entry={entry} />
 
-			<div className="min-h-0 overflow-auto p-4">
-				<div className="grid min-h-[320px] grid-rows-[auto_minmax(0,1fr)] gap-2">
-					<div className="flex flex-wrap items-center gap-2">
-						{allTabs.map((value) => (
-							<button
-								className={`h-8 rounded border px-3 text-sm ${
-									tab === value
+			<div className="min-h-0 min-w-0 overflow-hidden p-4">
+				<div className="grid h-full min-h-0 min-w-0 grid-rows-[auto_minmax(0,1fr)] gap-2">
+					<div className="flex min-w-0 items-start gap-2">
+						<div className="flex min-w-0 flex-wrap items-center gap-2">
+							{detailTabs.map((nextTab) => (
+								<button
+									className={`h-8 rounded border px-3 text-sm ${tab === nextTab
 										? "border-[#2563eb] bg-[#eff6ff] text-[#1d4ed8]"
 										: "border-[#cfd7e3] bg-white text-[#536173] hover:bg-[#f3f6fa]"
-								}`}
-								key={value}
-								type="button"
-								onClick={() => setTab(value)}
-							>
-								{detailTabLabel[value]}
-							</button>
-						))}
+										}`}
+									key={nextTab}
+									type="button"
+									onClick={() => setTab(nextTab)}
+								>
+									{labelOf(nextTab)}
+								</button>
+							))}
+						</div>
+						<div className="ml-auto flex shrink-0 items-center gap-2">
+							{tab === "javascript" ? <ExecuteButton script={script} /> : null}
+							<CopyButton text={text} />
+						</div>
 					</div>
 
-					{tab === "javascript" ? (
-						<ScriptEditor entry={selected} key={selected.id} script={script} onScriptChange={onScriptChange} />
-					) : detailText ? (
-						<CodeEditor
-							className="min-h-[260px] overflow-hidden rounded border border-[#d9e0ea] bg-white"
-							language="json"
-							readOnly={true}
-							value={detailText}
-						/>
-					) : (
-						<div className="min-h-[260px] rounded border border-[#d9e0ea] bg-white p-4 text-[#667386] text-sm">
-							No response captured yet
-						</div>
-					)}
+					{body}
 				</div>
 			</div>
 		</section>
+	);
+};
+
+
+type CopyStatus = "idle" | "copied" | "failed";
+
+const copyLabelOf = (status: CopyStatus) => {
+	if (status === "copied") return "Copied";
+	if (status === "failed") return "Failed";
+	return "Copy";
+};
+
+const CopyButton = ({ text }: { text: string | undefined }) => {
+	const [status, setStatus] = useState<CopyStatus>("idle");
+
+	const copy = async () => {
+		if (text === undefined) {
+			return;
+		}
+
+		try {
+			await navigator.clipboard.writeText(text);
+			setStatus("copied");
+		} catch {
+			setStatus("failed");
+		}
+		window.setTimeout(() => {
+			setStatus("idle");
+		}, 1400);
+	};
+
+	return (
+		<button
+			aria-label="Copy"
+			className="h-8 rounded border border-[#cfd7e3] px-3 text-sm text-[#536173] hover:bg-[#f3f6fa] disabled:cursor-not-allowed disabled:text-[#9aa5b3]"
+			disabled={text === undefined}
+			type="button"
+			onClick={copy}
+		>
+			{copyLabelOf(status)}
+		</button>
+	);
+};
+
+const compileScript = (source: string) =>
+	new Function(`"use strict";\nreturn (async () => {\n${source}\n})();`) as () => Promise<unknown>;
+
+const ExecuteButton = ({ script }: { script: string }) => {
+	const [running, setRunning] = useState(false);
+
+	const execute = async () => {
+		if (running) {
+			return;
+		}
+
+		setRunning(true);
+		try {
+			const fn = compileScript(script);
+			await fn();
+		} catch {
+			// Script return values and errors are intentionally ignored.
+		} finally {
+			setRunning(false);
+		}
+	};
+
+	return (
+		<button
+			className="h-8 rounded bg-[#14532d] px-3 font-semibold text-sm text-white hover:bg-[#166534] disabled:cursor-not-allowed disabled:bg-[#aab4c1]"
+			disabled={running}
+			type="button"
+			onClick={execute}
+		>
+			{running ? "Running" : "Execute"}
+		</button>
 	);
 };

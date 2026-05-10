@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { DebugEntry } from "./types";
+import type { DebugEntry } from "./entryUtils";
 
 const NEW_ENTRY_ANIMATION_MS = 900;
 

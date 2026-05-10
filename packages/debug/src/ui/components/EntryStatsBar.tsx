@@ -1,4 +1,4 @@
-import type { EntryStats } from "../types";
+import type { EntryStats } from "../entryUtils";
 
 const statsList: { key: keyof EntryStats; label: string }[] = [
 	{ key: "total", label: "Total" },
