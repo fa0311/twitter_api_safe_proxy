@@ -31,8 +31,8 @@ export const useDebugEntriesStore = create<State>()((set) => {
 
 		connect: () => {
 			const source = new EventSource("/api/events");
-			source.addEventListener("open", () => set({ connected: true }));
-			source.addEventListener("error", () => set({ connected: false }));
+			source.onopen = () => set({ connected: true });
+			source.onerror = () => set({ connected: false });
 			source.addEventListener("entry", (event) => {
 				const id = nextId++;
 				const entry = buildEntry(JSON.parse(event.data), id);
