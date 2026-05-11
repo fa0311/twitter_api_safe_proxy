@@ -3,7 +3,7 @@ import { type DebugEntry, defaultScriptOf } from "../entryUtils";
 import { useDebugEntriesStore, useEntrySelectionStore } from "../store";
 import { CodeEditor } from "./CodeEditor";
 import { DetailHeader } from "./DetailHeader";
-import { type DetailTab, detailTabs, labelOf } from "./detailPaneModel";
+import { type DetailTab, detailPayloadOf, detailTabs, labelOf } from "./detailPaneModel";
 
 export const DetailPane = () => {
 	const selectedEntryId = useEntrySelectionStore((s) => s.selectedEntryId);
@@ -28,16 +28,7 @@ const SelectedDetailPane = ({ entry }: { entry: DebugEntry }) => {
 	const [tab, setTab] = useState<DetailTab>("request");
 	const [script, onScriptChange] = useState(() => defaultScriptOf(entry));
 
-	const text = (() => {
-		if (tab === "response") {
-			return JSON.stringify(entry.response, null, 2);
-		} else if (tab === "request") {
-			return JSON.stringify(entry.request, null, 2);
-		} else if (tab === "javascript") {
-			return script;
-		}
-		throw new Error(`Unreachable`);
-	})();
+	const text = tab === "javascript" ? script : JSON.stringify(detailPayloadOf(entry, tab), null, 2);
 
 	const body = (() => {
 		if (tab === "javascript") {

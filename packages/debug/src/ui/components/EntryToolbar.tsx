@@ -1,6 +1,6 @@
 import type { MethodFilter, VersionFilter } from "../entryUtils";
+import type { EntryFilters, SortMode } from "../entryFilters";
 import { useDebugEntriesStore, useEntrySelectionStore } from "../store";
-import type { EntryFilters, SortMode } from "../useEntryFilters";
 
 const methodOptions: { value: MethodFilter; label: string }[] = [
 	{ label: "All methods", value: "all" },

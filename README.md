@@ -44,6 +44,21 @@ Install Playwright browsers if needed.
 pnpm exec playwright install
 ```
 
+## Tests
+
+Run the debug dashboard unit tests:
+
+```sh
+pnpm test:debug
+```
+
+The request and proxy test scripts exercise browser-backed integration flows:
+
+```sh
+pnpm test:request
+pnpm test:proxy
+```
+
 ## Configuration
 
 Configure the proxy server port, log level, and browser profiles in the workspace-level `settings.json`.

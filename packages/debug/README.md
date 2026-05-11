@@ -22,3 +22,9 @@ From the repository root, run these in separate terminals:
 pnpm dev:debug:server
 pnpm dev:debug
 ```
+
+Run the dashboard unit tests:
+
+```sh
+pnpm test:debug
+```
