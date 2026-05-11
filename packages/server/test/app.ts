@@ -13,7 +13,7 @@ describe("someFunction", () => {
 		const browser = await createBrowser({
 			browserType: "chromium",
 			userDataDir: await integration.temp(),
-			headless: false,
+			headless: true,
 			executablePath: undefined,
 			env: undefined,
 			proxy: undefined,

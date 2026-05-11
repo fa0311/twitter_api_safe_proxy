@@ -10,6 +10,7 @@
 		"dev:debug": "pnpm --filter twitter-api-safe-debug dev",
 		"build:proxy": "pnpm --filter twitter-api-safe-proxy build",
 		"build:debug": "pnpm --filter twitter-api-safe-debug build",
+		"build": "pnpm build:proxy && pnpm build:debug",
 		"start:proxy": "pnpm --filter twitter-api-safe-proxy start",
 		"start:debug": "pnpm --filter twitter-api-safe-proxy start:debug",
 		"test:request": "pnpm --filter twitter-api-safe-request test",
