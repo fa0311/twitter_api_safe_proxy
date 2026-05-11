@@ -3,14 +3,14 @@
 Safe request helpers for Twitter/X web API access through a Playwright persistent profile.
 
 ```ts
-import { createTwitterClient } from "twitter-api-safe-request";
+import { injectTwitterClient } from "twitter-api-safe-request";
 import { chromium } from "playwright";
 
 const context = await chromium.launchPersistentContext("./user_data/account1", {
 	headless: false,
 });
 const page = await context.newPage();
-const client = await createTwitterClient(page);
+const client = await injectTwitterClient(page);
 await page.goto("https://x.com/home");
 
 const result = await client.graphQLFullResponse(
